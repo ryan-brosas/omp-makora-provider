@@ -1,0 +1,38 @@
+{
+  "zai-org/GLM-5.1-FP8": {
+    "reasoning": true,
+    "compat": {
+      "thinkingFormat": "qwen-chat-template",
+      "supportsReasoningEffort": true,
+      "zaiToolStream": true
+    }
+  },
+  "openai/gpt-oss-120b": {
+    "reasoning": true,
+    "compat": {
+      "thinkingFormat": "qwen-chat-template",
+      "supportsReasoningEffort": true
+    }
+  },
+  "nvidia/Kimi-K2.6-NVFP4": {
+    "reasoning": true,
+    "compat": {
+      "thinkingFormat": "qwen-chat-template",
+      "supportsReasoningEffort": true
+    }
+  },
+  "unsloth/Qwen3.6-27B-NVFP4": {
+    "reasoning": true,
+    "compat": {
+      "thinkingFormat": "qwen-chat-template",
+      "supportsReasoningEffort": true
+    }
+  },
+  "unsloth/Qwen3.6-35B-A3B-NVFP4": {
+    "reasoning": true,
+    "compat": {
+      "thinkingFormat": "qwen-chat-template",
+      "supportsReasoningEffort": true
+    }
+  }
+}

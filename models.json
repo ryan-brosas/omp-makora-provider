@@ -1,0 +1,182 @@
+[
+  {
+    "id": "deepseek-ai/DeepSeek-V4-Flash",
+    "name": "DeepSeek V4 Flash",
+    "reasoning": false,
+    "input": ["text"],
+    "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    },
+    "contextWindow": 131072,
+    "maxTokens": 16384,
+    "baseUrl": "https://inference.makora.com/deepseek-v4-flash/v1",
+    "compat": {
+      "supportsDeveloperRole": false,
+      "supportsStore": false,
+      "maxTokensField": "max_completion_tokens"
+    }
+  },
+  {
+    "id": "deepseek-ai/DeepSeek-V4-Pro",
+    "name": "DeepSeek V4 Pro",
+    "reasoning": false,
+    "input": ["text"],
+    "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    },
+    "contextWindow": 131072,
+    "maxTokens": 16384,
+    "baseUrl": "https://inference.makora.com/deepseek-v4-pro/v1",
+    "compat": {
+      "supportsDeveloperRole": false,
+      "supportsStore": false,
+      "maxTokensField": "max_completion_tokens"
+    }
+  },
+  {
+    "id": "zai-org/GLM-5.1-FP8",
+    "name": "GLM 5.1 FP8",
+    "reasoning": false,
+    "input": ["text"],
+    "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    },
+    "contextWindow": 131072,
+    "maxTokens": 16384,
+    "baseUrl": "https://inference.makora.com/glm-5-1-fp8/v1",
+    "compat": {
+      "supportsDeveloperRole": false,
+      "supportsStore": false,
+      "maxTokensField": "max_completion_tokens"
+    }
+  },
+  {
+    "id": "openai/gpt-oss-120b",
+    "name": "GPT-OSS 120B",
+    "reasoning": false,
+    "input": ["text"],
+    "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    },
+    "contextWindow": 131072,
+    "maxTokens": 16384,
+    "baseUrl": "https://inference.makora.com/gpt-oss-120b/v1",
+    "compat": {
+      "supportsDeveloperRole": false,
+      "supportsStore": false,
+      "maxTokensField": "max_completion_tokens"
+    }
+  },
+  {
+    "id": "hy3-preview",
+    "name": "HY3 Preview",
+    "reasoning": false,
+    "input": ["text"],
+    "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    },
+    "contextWindow": 131072,
+    "maxTokens": 16384,
+    "baseUrl": "https://inference.makora.com/hy3-preview/v1",
+    "compat": {
+      "supportsDeveloperRole": false,
+      "supportsStore": false,
+      "maxTokensField": "max_completion_tokens"
+    }
+  },
+  {
+    "id": "nvidia/Kimi-K2.6-NVFP4",
+    "name": "Kimi K2.6 NVFP4",
+    "reasoning": false,
+    "input": ["text"],
+    "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    },
+    "contextWindow": 131072,
+    "maxTokens": 16384,
+    "baseUrl": "https://inference.makora.com/kimi-k2-6-nvfp4/v1",
+    "compat": {
+      "supportsDeveloperRole": false,
+      "supportsStore": false,
+      "maxTokensField": "max_completion_tokens"
+    }
+  },
+  {
+    "id": "amd/Llama-3.3-70B-Instruct-FP8-KV",
+    "name": "Llama 3.3 70B FP8",
+    "reasoning": false,
+    "input": ["text"],
+    "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    },
+    "contextWindow": 131072,
+    "maxTokens": 16384,
+    "baseUrl": "https://inference.makora.com/llama3-3-70b-instruct-fp8/v1",
+    "compat": {
+      "supportsDeveloperRole": false,
+      "supportsStore": false,
+      "maxTokensField": "max_completion_tokens"
+    }
+  },
+  {
+    "id": "unsloth/Qwen3.6-27B-NVFP4",
+    "name": "Qwen 3.6 27B NVFP4",
+    "reasoning": false,
+    "input": ["text"],
+    "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    },
+    "contextWindow": 262144,
+    "maxTokens": 16384,
+    "baseUrl": "https://inference.makora.com/qwen36-27b-nvfp4/v1",
+    "compat": {
+      "supportsDeveloperRole": false,
+      "supportsStore": false,
+      "maxTokensField": "max_completion_tokens"
+    }
+  },
+  {
+    "id": "unsloth/Qwen3.6-35B-A3B-NVFP4",
+    "name": "Qwen 3.6 35B A3B NVFP4",
+    "reasoning": false,
+    "input": ["text"],
+    "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    },
+    "contextWindow": 262144,
+    "maxTokens": 16384,
+    "baseUrl": "https://inference.makora.com/qwen36-35b-a3b-nvfp4/v1",
+    "compat": {
+      "supportsDeveloperRole": false,
+      "supportsStore": false,
+      "maxTokensField": "max_completion_tokens"
+    }
+  }
+]
