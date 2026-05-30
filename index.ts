@@ -45,13 +45,13 @@
  * supportsDeveloperRole is set to false for all models.
  *
  * Tool use notes:
- *   - Kimi K2.6 NVFP4: vLLM's Kimi deployment does not have
+ *   - Kimi K2.6 NVFP4, Qwen 3.6 models: vLLM's deployment does not have
  *     --enable-auto-tool-choice or --tool-call-parser set. When tools
  *     are present in the payload without an explicit tool_choice, vLLM
  *     defaults tool_choice to "auto" internally, triggering a 400.
  *     The before_provider_request hook forces tool_choice: "none" to
  *     avoid the implicit default-to-auto. Tool calling is effectively
- *     disabled for this model until Makora enables the server flags.
+ *     disabled for these models until Makora enables the server flags.
  *
  * Usage:
  *   # Option 1: Store in auth.json (recommended)
@@ -225,6 +225,8 @@ export default function (pi: ExtensionAPI) {
   // tool use is effectively disabled for these models regardless.
   const NO_AUTO_TOOL_CHOICE_MODELS = new Set([
     "nvidia/Kimi-K2.6-NVFP4",
+    "unsloth/Qwen3.6-27B-NVFP4",
+    "unsloth/Qwen3.6-35B-A3B-NVFP4",
   ]);
 
   pi.on("before_provider_request", (event, _ctx) => {
