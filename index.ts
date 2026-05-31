@@ -275,7 +275,7 @@ export default function (pi: ExtensionAPI) {
     const messages = event.messages;
     const hasRelevantModel = messages.some(
       (m) => m.role === "assistant" &&
-        m.api === "openai-completions" &&
+        m.provider === PROVIDER_ID &&
         typeof m.model === "string" &&
         TOOL_CALL_STRIP_MODELS.has(m.model)
     );
@@ -610,6 +610,8 @@ export default function (pi: ExtensionAPI) {
   pi.on("message_end", (event, _ctx) => {
     const msg = event.message;
     if (msg.role !== "assistant") return;
+
+    if (msg.provider !== PROVIDER_ID) return;
 
     // If vLLM already parsed tool calls *correctly* (upstream fix), keep them.
     // A toolCall block with a valid name is considered correctly parsed.
