@@ -1,6 +1,17 @@
-# pi-makora-provider
+<div align="center">
 
-Makora provider extension for [pi](https://github.com/earendil-works/pi-mono) — access open-weight models through the [Makora](https://inference.makora.com) inference optimization API.
+# 🔁 pi-makora-provider
+
+**Open-weight models through [Makora](https://inference.makora.com)**
+
+_DeepSeek V4, Kimi K2.6, GLM 5.1, Qwen 3.6 — with client-side tool call repair for [pi](https://github.com/earendil-works/pi-coding-agent)._
+
+[![pi extension](https://img.shields.io/badge/pi-extension-blueviolet)](https://github.com/earendil-works/pi-coding-agent)
+[![license](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
+
+</div>
+
+---
 
 ## Models
 
