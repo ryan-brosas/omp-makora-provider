@@ -12,7 +12,6 @@
     },
     "contextWindow": 1000000,
     "maxTokens": 16384,
-    "baseUrl": "https://inference.makora.com/deepseek-v4-flash/v1",
     "compat": {
       "supportsDeveloperRole": false,
       "supportsStore": false,
@@ -32,7 +31,6 @@
     },
     "contextWindow": 1000000,
     "maxTokens": 16384,
-    "baseUrl": "https://inference.makora.com/deepseek-v4-pro/v1",
     "compat": {
       "supportsDeveloperRole": false,
       "supportsStore": false,
@@ -52,7 +50,6 @@
     },
     "contextWindow": 200000,
     "maxTokens": 16384,
-    "baseUrl": "https://inference.makora.com/glm-5-1-fp8/v1",
     "compat": {
       "supportsDeveloperRole": false,
       "supportsStore": false,
@@ -75,33 +72,12 @@
     },
     "contextWindow": 128000,
     "maxTokens": 16384,
-    "baseUrl": "https://inference.makora.com/gpt-oss-120b/v1",
     "compat": {
       "supportsDeveloperRole": false,
       "supportsStore": false,
       "maxTokensField": "max_completion_tokens",
       "thinkingFormat": "qwen-chat-template",
       "supportsReasoningEffort": true
-    }
-  },
-  {
-    "id": "hy3-preview",
-    "name": "HY3 Preview",
-    "reasoning": false,
-    "input": ["text"],
-    "cost": {
-      "input": 0,
-      "output": 0,
-      "cacheRead": 0,
-      "cacheWrite": 0
-    },
-    "contextWindow": 262144,
-    "maxTokens": 16384,
-    "baseUrl": "https://inference.makora.com/hy3-preview/v1",
-    "compat": {
-      "supportsDeveloperRole": false,
-      "supportsStore": false,
-      "maxTokensField": "max_completion_tokens"
     }
   },
   {
@@ -117,7 +93,6 @@
     },
     "contextWindow": 262144,
     "maxTokens": 16384,
-    "baseUrl": "https://inference.makora.com/kimi-k2-6-nvfp4/v1",
     "compat": {
       "supportsDeveloperRole": false,
       "supportsStore": false,
@@ -159,7 +134,6 @@
     },
     "contextWindow": 262144,
     "maxTokens": 16384,
-    "baseUrl": "https://inference.makora.com/qwen36-27b-nvfp4/v1",
     "compat": {
       "supportsDeveloperRole": false,
       "supportsStore": false,
@@ -181,7 +155,6 @@
     },
     "contextWindow": 262144,
     "maxTokens": 16384,
-    "baseUrl": "https://inference.makora.com/qwen36-35b-a3b-nvfp4/v1",
     "compat": {
       "supportsDeveloperRole": false,
       "supportsStore": false,

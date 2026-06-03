@@ -5,10 +5,10 @@
  * OpenAI completions API.
  *
  * Makora is an inference optimization platform serving open-weight models via
- * per-model URL slugs under https://inference.makora.com/{slug}/v1. Each
+ * a unified OpenAI-compatible API at https://inference.makora.com/v1. Each
  * model is hosted on vLLM and speaks the standard OpenAI chat completions
- * protocol. Because models live at separate endpoints, every model carries
- * its own `baseUrl` override.
+ * protocol. Most models use the shared provider baseUrl; models not yet
+ * on the unified endpoint retain a per-model `baseUrl` override.
  *
  * Model resolution strategy: static models.json merged with custom-models.json
  *
@@ -29,7 +29,7 @@
  *     field. Can be toggled via enable_thinking.
  *   - Qwen 3.6 models: reasoning via chat_template_kwargs.enable_thinking;
  *     returns `reasoning` field.
- *   - HY3 Preview, Llama 3.3 70B: not reasoning models.
+ *   - Llama 3.3 70B: not a reasoning model.
  *
  * Developer role is NOT supported by any of the chat templates on Makora's
  * vLLM deployment (prompts with role: "developer" are silently dropped).
@@ -225,7 +225,7 @@ function buildModels(
 // ─── Extension Entry Point ──────────────────────────────────────────────
 
 const PROVIDER_ID = "makora";
-const BASE_URL = "https://inference.makora.com";
+const BASE_URL = "https://inference.makora.com/v1";
 
 export default function (pi: ExtensionAPI) {
   const embeddedModels = modelsData as JsonModel[];
