@@ -243,6 +243,10 @@ export default function (pi: ExtensionAPI) {
     models,
   });
 
+  // Temporarily disable all grammar fixes (tool call bypass, strip, and
+  // re-parsing hooks) to observe raw model output from vLLM.
+  const GRAMMAR_FIXES_ENABLED = false;
+
   // Models whose vLLM deployment has broken or missing tool call streaming.
   // Setting tool_choice: "none" bypasses the streaming parser; combined with
   // skip_special_tokens: false this lets tool call markers pass through as
@@ -272,6 +276,7 @@ export default function (pi: ExtensionAPI) {
   // is to strip tool_calls and inject them as text in the model's native
   // format before sending the follow-up request.
   pi.on("context", (event, _ctx) => {
+    if (!GRAMMAR_FIXES_ENABLED) return;
     const messages = event.messages;
     const hasRelevantModel = messages.some(
       (m) => m.role === "assistant" &&
@@ -321,6 +326,7 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on("before_provider_request", (event, _ctx) => {
+    if (!GRAMMAR_FIXES_ENABLED) return;
     const payload = event.payload as Record<string, unknown>;
     const modelId = payload.model as string | undefined;
     if (!modelId || !TOOL_BYPASS_MODELS.has(modelId)) return;
@@ -608,6 +614,7 @@ export default function (pi: ExtensionAPI) {
   }
 
   pi.on("message_end", (event, _ctx) => {
+    if (!GRAMMAR_FIXES_ENABLED) return;
     const msg = event.message;
     if (msg.role !== "assistant") return;
 
