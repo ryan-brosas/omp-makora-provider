@@ -18,9 +18,12 @@
  *     ignores that — the before_provider_request hook rewrites the payload to
  *     use chat_template_kwargs: { thinking: true } instead.
  *     Returns reasoning_content field.
- *   - DeepSeek V4 Flash: reasoning via include_reasoning on vLLM.
+ *   - DeepSeek V4 Flash: reasoning via include_reasoning +
+ *     chat_template_kwargs.thinking on vLLM.
  *     The before_provider_request hook rewrites the payload to replace
- *     thinking: { type } with include_reasoning: true.
+ *     thinking: { type } with include_reasoning: true +
+ *     chat_template_kwargs: { thinking: true }.
+ *     include_reasoning alone returns reasoning: null on this vLLM build.
  *     Returns reasoning field.
  *   - GLM 5.1 FP8: reasoning via chat_template_kwargs.enable_thinking.
  *     NOTE: vLLM may leak chain-of-thought into content instead of the
@@ -214,7 +217,9 @@ const DS_VLLM_MODELS = new Set([DS_PRO_ID, DS_FLASH_ID]);
  * is the official DeepSeek API format — but Makora's vLLM deployment ignores
  * it. vLLM requires different params:
  *   - DS V4 Pro:  `chat_template_kwargs: { thinking: true }` + `reasoning_effort`
- *   - DS V4 Flash: `include_reasoning: true` + `reasoning_effort`
+ *   - DS V4 Flash: `include_reasoning: true` + `chat_template_kwargs: { thinking: true }`
+ *     + `reasoning_effort`. `include_reasoning` alone returns `reasoning: null`
+ *     on this vLLM build — both params are required.
  *
  * This hook rewrites the payload accordingly.
  */
@@ -232,8 +237,12 @@ function rewriteDsVllmPayload(payload: Record<string, unknown>): Record<string, 
     const ctq = (p.chat_template_kwargs as Record<string, unknown>) ?? {};
     p.chat_template_kwargs = { ...ctq, thinking: true };
   } else if (model === DS_FLASH_ID) {
-    // DS Flash: include_reasoning + reasoning_effort
+    // DS Flash: include_reasoning + chat_template_kwargs.thinking + reasoning_effort
+    // vLLM requires *both* include_reasoning and chat_template_kwargs.thinking:
+    // include_reasoning alone returns reasoning: null.
     p.include_reasoning = true;
+    const ctq = (p.chat_template_kwargs as Record<string, unknown>) ?? {};
+    p.chat_template_kwargs = { ...ctq, thinking: true };
   }
 
   return p;

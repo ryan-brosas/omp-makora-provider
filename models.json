@@ -3,7 +3,7 @@
     "id": "deepseek-ai/DeepSeek-V4-Flash",
     "name": "DeepSeek V4 Flash",
     "reasoning": false,
-    "notes": "`include_reasoning` via `before_provider_request` payload rewrite; returns `reasoning` field",
+    "notes": "`include_reasoning` + `chat_template_kwargs.thinking` via `before_provider_request` payload rewrite; returns `reasoning` field"
     "input": ["text"],
     "cost": {
       "input": 0,
@@ -23,7 +23,7 @@
     "id": "deepseek-ai/DeepSeek-V4-Pro",
     "name": "DeepSeek V4 Pro",
     "reasoning": false,
-    "notes": "`chat_template_kwargs.thinking` via `before_provider_request` payload rewrite; returns `reasoning_content` field",
+    "notes": "`chat_template_kwargs.thinking` via `before_provider_request` payload rewrite; returns `reasoning_content` field"
     "input": ["text"],
     "cost": {
       "input": 0,
@@ -43,7 +43,7 @@
     "id": "zai-org/GLM-5.1-FP8",
     "name": "GLM 5.1 FP8",
     "reasoning": true,
-    "notes": "`enable_thinking` via `qwen-chat-template`; client-side tool call parsing (vLLM streaming parser bypass)",
+    "notes": "`enable_thinking` via `qwen-chat-template`; returns `reasoning_content` field; client-side tool call parsing (vLLM streaming parser bypass)",
     "input": ["text"],
     "cost": {
       "input": 0,
