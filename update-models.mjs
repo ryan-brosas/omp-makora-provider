@@ -28,6 +28,7 @@ function applyPatchToModel(model, p) {
   const result = { ...model };
   if (p.name !== undefined) result.name = p.name;
   if (p.reasoning !== undefined) result.reasoning = p.reasoning;
+  if (p.input !== undefined) result.input = p.input;
   if (p.notes !== undefined) result.notes = p.notes;
   if (p.contextWindow !== undefined) result.contextWindow = p.contextWindow;
   if (p.maxTokens !== undefined) result.maxTokens = p.maxTokens;

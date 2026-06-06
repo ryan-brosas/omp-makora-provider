@@ -35,6 +35,7 @@
     }
   },
   "nvidia/Kimi-K2.6-NVFP4": {
+    "input": ["text", "image"],
     "thinkingLevelMap": {
       "minimal": "low",
       "xhigh": "high"
