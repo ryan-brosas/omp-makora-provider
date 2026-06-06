@@ -2,8 +2,11 @@
   "deepseek-ai/DeepSeek-V4-Flash": {
     "reasoning": true,
     "thinkingLevelMap": {
-      "minimal": "low",
-      "xhigh": "high"
+      "minimal": null,
+      "low": null,
+      "medium": null,
+      "high": "high",
+      "xhigh": "max"
     },
     "compat": {
       "thinkingFormat": "deepseek",
@@ -13,8 +16,11 @@
   "deepseek-ai/DeepSeek-V4-Pro": {
     "reasoning": true,
     "thinkingLevelMap": {
-      "minimal": "low",
-      "xhigh": "high"
+      "minimal": null,
+      "low": null,
+      "medium": null,
+      "high": "high",
+      "xhigh": "max"
     },
     "compat": {
       "thinkingFormat": "deepseek",
