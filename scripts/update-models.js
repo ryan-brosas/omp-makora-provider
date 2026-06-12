@@ -79,6 +79,7 @@ const DISPLAY_NAME_MAP = {
   'zai-org/GLM-5.1-FP8': 'GLM 5.1 FP8',
   'openai/gpt-oss-120b': 'GPT-OSS 120B',
   'nvidia/Kimi-K2.6-NVFP4': 'Kimi K2.6 NVFP4',
+  'MiniMaxAI/MiniMax-M3-MXFP8': 'MiniMax M3 MXFP8',
   'meta-llama/Llama-3.3-70B-Instruct': 'Llama 3.3 70B Instruct',
   'unsloth/Qwen3.6-27B-NVFP4': 'Qwen 3.6 27B NVFP4',
   'unsloth/Qwen3.6-35B-A3B-NVFP4': 'Qwen 3.6 35B A3B NVFP4',

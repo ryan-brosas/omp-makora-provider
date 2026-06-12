@@ -82,6 +82,26 @@
       "supportsReasoningEffort": true
     }
   },
+  "MiniMaxAI/MiniMax-M3-MXFP8": {
+    "reasoning": true,
+    "input": [
+      "text",
+      "image"
+    ],
+    "notes": "Reasoning via `chat_template_kwargs.enable_thinking`; returns `reasoning_content` field",
+    "thinkingLevelMap": {
+      "minimal": null,
+      "low": null,
+      "medium": null,
+      "high": "high",
+      "xhigh": "max"
+    },
+    "compat": {
+      "thinkingFormat": "deepseek",
+      "supportsReasoningEffort": true,
+      "requiresReasoningContentOnAssistantMessages": true
+    }
+  },
   "zai-org/GLM-5.1-FP8": {
     "contextWindow": 200000,
     "reasoning": true,

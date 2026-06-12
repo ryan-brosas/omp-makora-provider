@@ -25,6 +25,7 @@ _DeepSeek V4, Kimi K2.6, GLM 5.1, Qwen 3.6 — with client-side tool call repair
 | Kimi K2.6 NVFP4 | `nvidia/Kimi-K2.6-NVFP4` | Yes | Reasoning on by default; client-side tool call parsing (vLLM streaming parser bypass) |
 | Llama 3.3 70B FP8 | `amd/Llama-3.3-70B-Instruct-FP8-KV` | No |  |
 | Llama 3.3 70B Instruct | `meta-llama/Llama-3.3-70B-Instruct` | No |  |
+| MiniMax M3 MXFP8 | `MiniMaxAI/MiniMax-M3-MXFP8` | Yes | Reasoning via `chat_template_kwargs.enable_thinking`; returns `reasoning_content` field |
 | Qwen 3.6 27B NVFP4 | `unsloth/Qwen3.6-27B-NVFP4` | Yes | `enable_thinking` via `qwen-chat-template`; client-side tool call parsing (vLLM streaming parser bypass) |
 | Qwen 3.6 35B A3B NVFP4 | `unsloth/Qwen3.6-35B-A3B-NVFP4` | Yes | `enable_thinking` via `qwen-chat-template`; client-side tool call parsing (vLLM streaming parser bypass) |
 <!-- MODELS_TABLE_END -->
@@ -157,3 +158,4 @@ These issues are common to all vLLM-hosted providers and affect Makora models:
   - **DS V4 Pro**: `chat_template_kwargs: { thinking: true }`. Returns `reasoning_content`.
   - **DS V4 Flash**: `include_reasoning: true` + `chat_template_kwargs: { thinking: true }`. `include_reasoning` alone returns `reasoning: null` on this vLLM build — both params are required. Returns `reasoning`.
 - **GLM 5.1 reasoning**: Returns `reasoning_content` (not `reasoning`). pi's OpenAI completions handler checks `reasoning_content` first, so this is handled correctly.
+- **MiniMax M3 reasoning**: Uses `chat_template_kwargs.enable_thinking` to toggle thinking (not `chat_template_kwargs.thinking` like DeepSeek). The `before_provider_request` hook rewrites the DeepSeek API-style `thinking` param into vLLM-native `chat_template_kwargs: { enable_thinking: true }`. Returns `reasoning_content` field.

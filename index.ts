@@ -39,6 +39,8 @@
  *     field. Can be toggled via enable_thinking.
  *   - Qwen 3.6 models: reasoning via chat_template_kwargs.enable_thinking;
  *     returns `reasoning` field.
+ *   - MiniMax M3 MXFP8: reasoning via chat_template_kwargs.enable_thinking;
+ *     returns reasoning_content field.
  *   - Llama 3.3 70B: not a reasoning model.
  *
  * Developer role is NOT supported by any of the chat templates on Makora's
@@ -207,42 +209,54 @@ const BASE_URL = "https://inference.makora.com/v1";
 
 const DS_PRO_ID = "deepseek-ai/DeepSeek-V4-Pro";
 const DS_FLASH_ID = "deepseek-ai/DeepSeek-V4-Flash";
+const MINIMAX_M3_ID = "MiniMaxAI/MiniMax-M3-MXFP8";
 
 const DS_VLLM_MODELS = new Set([DS_PRO_ID, DS_FLASH_ID]);
+const ENABLE_THINKING_VLLM_MODELS = new Set([MINIMAX_M3_ID]);
 
 /**
- * Intercept the request payload for DeepSeek V4 models on vLLM.
+ * Intercept the request payload for models that need vLLM-specific thinking
+ * param rewrites.
  *
  * pi's "deepseek" thinkingFormat sends `thinking: { type: "enabled" }` which
  * is the official DeepSeek API format — but Makora's vLLM deployment ignores
- * it. vLLM requires different params:
+ * it. vLLM requires different params depending on the model:
  *   - DS V4 Pro:  `chat_template_kwargs: { thinking: true }` + `reasoning_effort`
  *   - DS V4 Flash: `include_reasoning: true` + `chat_template_kwargs: { thinking: true }`
  *     + `reasoning_effort`. `include_reasoning` alone returns `reasoning: null`
  *     on this vLLM build — both params are required.
+ *   - MiniMax M3: `chat_template_kwargs: { enable_thinking: true }` +
+ *     `reasoning_effort`. Returns `reasoning_content` field.
  *
  * This hook rewrites the payload accordingly.
  */
-function rewriteDsVllmPayload(payload: Record<string, unknown>): Record<string, unknown> {
+function rewriteVllmPayload(payload: Record<string, unknown>): Record<string, unknown> {
   const model = payload.model as string | undefined;
-  if (!model || !DS_VLLM_MODELS.has(model)) return payload;
+  if (!model) return payload;
 
   const p = { ...payload };
 
-  // Remove the DeepSeek API-style `thinking` param that vLLM ignores
-  delete p.thinking;
+  if (DS_VLLM_MODELS.has(model)) {
+    // Remove the DeepSeek API-style `thinking` param that vLLM ignores
+    delete p.thinking;
 
-  if (model === DS_PRO_ID) {
-    // DS Pro: chat_template_kwargs.thinking + reasoning_effort
+    if (model === DS_PRO_ID) {
+      // DS Pro: chat_template_kwargs.thinking + reasoning_effort
+      const ctq = (p.chat_template_kwargs as Record<string, unknown>) ?? {};
+      p.chat_template_kwargs = { ...ctq, thinking: true };
+    } else if (model === DS_FLASH_ID) {
+      // DS Flash: include_reasoning + chat_template_kwargs.thinking + reasoning_effort
+      // vLLM requires *both* include_reasoning and chat_template_kwargs.thinking:
+      // include_reasoning alone returns reasoning: null.
+      p.include_reasoning = true;
+      const ctq = (p.chat_template_kwargs as Record<string, unknown>) ?? {};
+      p.chat_template_kwargs = { ...ctq, thinking: true };
+    }
+  } else if (ENABLE_THINKING_VLLM_MODELS.has(model)) {
+    // Models using chat_template_kwargs.enable_thinking (e.g. MiniMax M3)
+    delete p.thinking;
     const ctq = (p.chat_template_kwargs as Record<string, unknown>) ?? {};
-    p.chat_template_kwargs = { ...ctq, thinking: true };
-  } else if (model === DS_FLASH_ID) {
-    // DS Flash: include_reasoning + chat_template_kwargs.thinking + reasoning_effort
-    // vLLM requires *both* include_reasoning and chat_template_kwargs.thinking:
-    // include_reasoning alone returns reasoning: null.
-    p.include_reasoning = true;
-    const ctq = (p.chat_template_kwargs as Record<string, unknown>) ?? {};
-    p.chat_template_kwargs = { ...ctq, thinking: true };
+    p.chat_template_kwargs = { ...ctq, enable_thinking: true };
   }
 
   return p;
@@ -267,7 +281,7 @@ export default function (pi: ExtensionAPI) {
   pi.on("before_provider_request", (event) => {
     const payload = event.payload as Record<string, unknown> | undefined;
     if (!payload || typeof payload.model !== "string") return;
-    return rewriteDsVllmPayload(payload);
+    return rewriteVllmPayload(payload);
   });
 }
 
