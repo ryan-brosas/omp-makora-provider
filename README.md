@@ -33,7 +33,24 @@ _DeepSeek V4, Kimi K2.6, GLM 5.1, Qwen 3.6 — with client-side tool call repair
 
 ## Installation
 
-### Option 1: Using `pi install` (Recommended)
+### Option 1: Install from npm (Recommended)
+
+```bash
+pi install npm:pi-makora-provider
+```
+
+Then set your API key and run pi:
+```bash
+# Recommended: add to auth.json
+# See Authentication section below
+
+# Or set as environment variable
+export MAKORA_OPTIMIZE_TOKEN=your-api-key-here
+
+pi
+```
+
+### Option 2: Using `pi install` from GitHub
 
 Install directly from GitHub:
 
@@ -52,7 +69,7 @@ export MAKORA_OPTIMIZE_TOKEN=your-api-key-here
 pi
 ```
 
-### Option 2: Manual Clone
+### Option 3: Manual Clone
 
 1. Clone this repository:
    ```bash
