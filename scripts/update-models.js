@@ -77,6 +77,7 @@ const DISPLAY_NAME_MAP = {
   'deepseek-ai/DeepSeek-V4-Flash': 'DeepSeek V4 Flash',
   'deepseek-ai/DeepSeek-V4-Pro': 'DeepSeek V4 Pro',
   'zai-org/GLM-5.1-FP8': 'GLM 5.1 FP8',
+  'zai-org/GLM-5.2-FP8': 'GLM 5.2 FP8',
   'openai/gpt-oss-120b': 'GPT-OSS 120B',
   'nvidia/Kimi-K2.6-NVFP4': 'Kimi K2.6 NVFP4',
   'MiniMaxAI/MiniMax-M3-MXFP8': 'MiniMax M3 MXFP8',

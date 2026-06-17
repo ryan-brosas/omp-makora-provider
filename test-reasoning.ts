@@ -71,6 +71,19 @@ const MODELS: ModelSpec[] = [
     }),
   },
   {
+    id: "zai-org/GLM-5.2-FP8",
+    name: "GLM 5.2 FP8",
+    reasoningResponseField: "reasoning_content",
+    buildPayload: (messages) => ({
+      model: "zai-org/GLM-5.2-FP8",
+      messages,
+      max_tokens: 1024,
+      stream: false,
+      // Mimics qwen-chat-template thinkingFormat
+      chat_template_kwargs: { enable_thinking: true },
+    }),
+  },
+  {
     id: "openai/gpt-oss-120b",
     name: "GPT-OSS 120B",
     reasoningResponseField: "reasoning",

@@ -34,6 +34,10 @@
  *     delta. Setting zaiToolStream: true sends tool_stream: true in the
  *     request, which forces vLLM to use the explicit tool streaming path
  *     that correctly emits tool call chunks.
+ *   - GLM 5.2 FP8: reasoning via chat_template_kwargs.enable_thinking.
+ *     Thinking levels (minimal/low/medium/high/max) are copied from the
+ *     neuralwatt provider's GLM 5.2 configuration and mapped through pi's
+ *     qwen-chat-template thinkingFormat.
  *   - GPT-OSS 120B: reasoning always on; returns `reasoning` field.
  *   - Kimi K2.6 NVFP4 / Kimi K2.7 Code: reasoning always on by default;
  *     returns `reasoning` field. Can be toggled via enable_thinking.

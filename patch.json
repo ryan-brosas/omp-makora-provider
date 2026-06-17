@@ -131,5 +131,20 @@
       "supportsReasoningEffort": true,
       "zaiToolStream": true
     }
+  },
+  "zai-org/GLM-5.2-FP8": {
+    "reasoning": true,
+    "notes": "`enable_thinking` via `qwen-chat-template`; thinking levels copied from neuralwatt GLM 5.2; returns `reasoning_content` field",
+    "thinkingLevelMap": {
+      "minimal": "minimal",
+      "low": "low",
+      "medium": "medium",
+      "high": "high",
+      "xhigh": "max"
+    },
+    "compat": {
+      "thinkingFormat": "qwen-chat-template",
+      "supportsReasoningEffort": true
+    }
   }
 }
