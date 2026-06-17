@@ -1,0 +1,17 @@
+omp-o3l: Strip leaked GLM 5.1 chain-of-thought content markers from assistant messages
+=====================================================================
+
+STATUS: Artifacts complete — PRD + Plan written, awaiting /ship
+
+PHASE: /plan
+
+COMPLETED:
+- [x] PRD (prd.md, prd.json)
+- [x] Decisions (decisions.md)
+- [x] Plan (plan.md)
+- [x] Tasks (tasks.md)
+- [x] Context capsule (context-capsule.md)
+
+NEXT:
+- Run /ship to implement
+- Then /verify

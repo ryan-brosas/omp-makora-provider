@@ -1,0 +1,28 @@
+{
+  "bead": "omp-ei6",
+  "title": "Conditional vLLM parser bypass — only disable tool_choice and enable special token passthrough when tools are present for Kimi/Qwen",
+  "type": "task",
+  "priority": 1,
+  "estimated_minutes": 30,
+  "labels": ["hardening", "tool-calling", "content-quality"],
+  "scope": {
+    "in": [
+      "Add tool-presence guard in rewriteVllmPayload before applying DISABLE_TOOL_CHOICE_MODELS overrides",
+      "Only set tool_choice=none and skip_special_tokens=false when payload.tools is non-empty"
+    ],
+    "out": [
+      "Non-Kimi/Qwen models",
+      "Streaming-specific optimizations",
+      "Changing parser bypass strategy",
+      "Modifying stripControlTokens logic"
+    ]
+  },
+  "requirements": [
+    "When payload has no tools: tool_choice NOT modified, skip_special_tokens NOT set",
+    "When payload has tools: existing behavior preserved",
+    "GLM 5.1, DeepSeek, MiniMax M3 unaffected",
+    "All existing tests pass"
+  ],
+  "files": ["index.ts"],
+  "blast_radius": "rewriteVllmPayload function (~10 lines), DISABLE_TOOL_CHOICE_MODELS block"
+}

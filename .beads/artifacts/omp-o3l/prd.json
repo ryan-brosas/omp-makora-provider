@@ -1,0 +1,51 @@
+{
+  "bead_id": "omp-o3l",
+  "type": "bug",
+  "priority": 1,
+  "estimate_minutes": 60,
+  "requirements": [
+    {
+      "id": 1,
+      "text": "Strip ` thinking` and ` response` markers from GLM 5.1 assistant `content` when they leak",
+      "priority": "MUST",
+      "acceptance": "Content passed to downstream consumers contains no ` thinking` or ` response` markers"
+    },
+    {
+      "id": 2,
+      "text": "Move leaked thinking content to `reasoning_content` field",
+      "priority": "MUST",
+      "acceptance": "When thinking content is extracted, it populates `reasoning_content` on the message"
+    },
+    {
+      "id": 3,
+      "text": "Do NOT strip markers from non-GLM models",
+      "priority": "MUST",
+      "acceptance": "Messages from DeepSeek, Kimi, Qwen, etc. pass through unchanged"
+    },
+    {
+      "id": 4,
+      "text": "Integrate with existing `message_end` hook",
+      "priority": "MUST",
+      "acceptance": "CoT stripping happens in same hook as tool call repair; no additional hook overhead"
+    },
+    {
+      "id": 5,
+      "text": "Handle edge cases: partial leaks, markers embedded in code blocks, empty thinking",
+      "priority": "SHOULD",
+      "acceptance": "No crash, no corrupted content, graceful fallback"
+    },
+    {
+      "id": 6,
+      "text": "Tests cover all marker presence patterns",
+      "priority": "MUST",
+      "acceptance": "≥6 test cases: both markers present, neither present, thinking-only, response-only, thinking with tool calls, empty thinking between markers"
+    }
+  ],
+  "success_criteria": [
+    "GLM 5.1 assistant messages with leaked ` thinking`/` response` markers are cleaned",
+    "Leaked thinking content is moved to `reasoning_content` field",
+    "Non-GLM messages pass through unchanged",
+    "All unit tests pass",
+    "No regressions in existing reasoning tests"
+  ]
+}
