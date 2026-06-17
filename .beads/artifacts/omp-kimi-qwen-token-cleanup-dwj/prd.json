@@ -1,0 +1,45 @@
+{
+  "bead_id": "omp-kimi-qwen-token-cleanup-dwj",
+  "type": "bug",
+  "priority": 1,
+  "estimated_minutes": 35,
+  "requirements": [
+    {
+      "id": 1,
+      "requirement": "Strip vLLM control tokens from Kimi/Qwen text prefix in message_end",
+      "priority": "MUST",
+      "acceptance": "textBeforeTools contains no <|im_start|>, <|im_end|>, <|endoftext|>, <|fim_prefix|>, <|fim_suffix|>, <|fim_middle|> tokens"
+    },
+    {
+      "id": 2,
+      "requirement": "Fix Qwen splitBeforeTools offset bug",
+      "priority": "MUST",
+      "acceptance": "Function slices cleaned text (not original) when computing prefix"
+    },
+    {
+      "id": 3,
+      "requirement": "Preserve all existing tool call repair behavior",
+      "priority": "MUST",
+      "acceptance": "GLM, Kimi, Qwen tool call parsing works identically; no regression"
+    },
+    {
+      "id": 4,
+      "requirement": "Add debug logging for cleanup actions",
+      "priority": "SHOULD",
+      "acceptance": "console.debug logs token count stripped per message"
+    },
+    {
+      "id": 5,
+      "requirement": "Handle edge cases",
+      "priority": "SHOULD",
+      "acceptance": "Empty text, tokens-only text, interleaved tokens handled gracefully"
+    }
+  ],
+  "success_criteria": [
+    "Kimi/Qwen assistant messages contain no vLLM control tokens in text prefix",
+    "Qwen text prefix never contains █ or truncated text",
+    "All existing tool call repair continues to work",
+    "No regressions in GLM, Kimi, or Qwen tool calling",
+    "Code passes type check: npx tsc --noEmit index.ts"
+  ]
+}

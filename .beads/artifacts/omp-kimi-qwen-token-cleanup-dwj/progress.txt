@@ -1,0 +1,7 @@
+2026-06-17T00:00:00Z — WAVE 1 START: Adding stripControlTokens utility
+2026-06-17T00:00:00Z — WAVE 1 COMPLETE: stripControlTokens function + VLLM_CONTROL_TOKENS constant added after splitBeforeTools
+2026-06-17T00:00:00Z — WAVE 2 START: Fix Qwen bug + integrate cleanup
+2026-06-17T00:00:00Z — WAVE 2 COMPLETE: Qwen offset fix (cleaned.slice), stripControlTokens integrated into message_end, debug logging added
+2026-06-17T00:00:00Z — WAVE 3 START: Verification
+2026-06-17T00:00:00Z — WAVE 3 COMPLETE: All grep regression checks pass. Type-check not available (no tsc). Reasoning test skipped (no API key).
+2026-06-17T00:00:00Z — BEAD COMPLETE: omp-kimi-qwen-token-cleanup-dwj

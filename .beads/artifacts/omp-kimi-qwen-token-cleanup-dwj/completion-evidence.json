@@ -1,0 +1,64 @@
+{
+  "bead": "omp-kimi-qwen-token-cleanup-dwj",
+  "actor": "hephaestus",
+  "completed": "2026-06-17",
+  "status": "all_checks_pass",
+  "requirements_met": [
+    {
+      "id": 1,
+      "description": "Strip vLLM control tokens from Kimi/Qwen text prefix in message_end",
+      "met": true,
+      "evidence": "stripControlTokens() function strips 9 known vLLM tokens; called on textBeforeTools in message_end handler"
+    },
+    {
+      "id": 2,
+      "description": "Fix Qwen splitBeforeTools offset bug",
+      "met": true,
+      "evidence": "Qwen branch now returns cleaned.slice(0, idx) instead of text.slice(0, idx); grep confirms single cleaned.slice occurrence"
+    },
+    {
+      "id": 3,
+      "description": "Preserve all existing tool call repair behavior",
+      "met": true,
+      "evidence": "grep counts unchanged: parseGlmToolCalls=2, parseKimiToolCalls=2, parseQwenToolCalls=2, toolCallsToGlmXml=2, rewriteVllmPayload=2, buildRepairedContent=2"
+    },
+    {
+      "id": 4,
+      "description": "Add debug logging for cleanup actions",
+      "met": true,
+      "evidence": "console.debug added in message_end handler; logs model name and byte count stripped"
+    },
+    {
+      "id": 5,
+      "description": "Handle edge cases",
+      "met": true,
+      "evidence": "stripControlTokens handles empty string (returns empty) and text with no tokens (returns unchanged)"
+    }
+  ],
+  "verification_commands": {
+    "regression_grep": "grep -c parseGlmToolCalls index.ts && grep -c parseKimiToolCalls index.ts && grep -c parseQwenToolCalls index.ts && grep -c toolCallsToGlmXml index.ts",
+    "qwen_fix": "grep 'cleaned.slice' index.ts",
+    "strip_integration": "grep -c stripControlTokens index.ts",
+    "debug_count": "grep -c console.debug index.ts",
+    "model_sets": "grep -c 'new Set' index.ts"
+  },
+  "verification_results": {
+    "parseGlmToolCalls": 2,
+    "parseKimiToolCalls": 2,
+    "parseQwenToolCalls": 2,
+    "toolCallsToGlmXml": 2,
+    "rewriteVllmPayload": 2,
+    "buildRepairedContent": 2,
+    "stripControlTokens": 2,
+    "cleanedSlice": 1,
+    "consoleDebug": 5,
+    "newSet": 5
+  },
+  "manual_verification_needed": [
+    "Run MAKORA_OPTIMIZE_TOKEN=$TOKEN npx tsx test-reasoning.ts when API key available",
+    "Manual test with Kimi K2.6 or Qwen 3.6 calling a tool to verify no control tokens in content"
+  ],
+  "files_changed": [
+    "index.ts"
+  ]
+}

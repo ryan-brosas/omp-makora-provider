@@ -519,9 +519,37 @@ function splitBeforeTools(model: string, text: string): string {
   if (model === QWEN_3_6_27B_ID || model === QWEN_3_6_35B_ID) {
     const cleaned = text.replace(/█/g, "");
     const idx = cleaned.indexOf("<function=");
-    return idx >= 0 ? text.slice(0, idx).trimEnd() : text;
+    return idx >= 0 ? cleaned.slice(0, idx).trimEnd() : text;
   }
   return text;
+}
+
+// ─── vLLM control token cleanup ─────────────────────────────────────────
+
+/**
+ * Known vLLM control tokens that leak into assistant content when
+ * skip_special_tokens: false is set for tool call repair passthrough.
+ * Exact string matching — no fuzzy regex — to avoid false positives.
+ */
+const VLLM_CONTROL_TOKENS = [
+  "<|im_start|>",
+  "<|im_end|>",
+  "<|endoftext|>",
+  "<|fim_prefix|>",
+  "<|fim_suffix|>",
+  "<|fim_middle|>",
+  "<|start_header_id|>",
+  "<|end_header_id|>",
+  "<|eot_id|>",
+];
+
+/** Strip leaked vLLM control tokens from text using exact string replacement. */
+function stripControlTokens(text: string): string {
+  let cleaned = text;
+  for (const token of VLLM_CONTROL_TOKENS) {
+    cleaned = cleaned.replaceAll(token, "");
+  }
+  return cleaned;
 }
 
 // ─── Provider entry point ──────────────────────────────────────────────────
@@ -581,7 +609,11 @@ export default function (pi: ExtensionAPI) {
     }
 
     const textBefore = splitBeforeTools(model, text);
-    const repaired = buildRepairedContent(content, parsed, textBefore);
+    const textBeforeCleaned = stripControlTokens(textBefore);
+    if (textBeforeCleaned.length !== textBefore.length) {
+      console.debug(`makora: [${model}] stripped ${textBefore.length - textBeforeCleaned.length}B of vLLM control tokens from content prefix`);
+    }
+    const repaired = buildRepairedContent(content, parsed, textBeforeCleaned);
 
     return {
       message: {
