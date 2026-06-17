@@ -706,7 +706,12 @@ export default function (pi: ExtensionAPI) {
       const stripped = stripGlmCotMarkers(content);
       if (stripped.changed) {
         content = stripped.content;
-        reasoningContent = stripped.reasoningContent;
+        if (stripped.reasoningContent) {
+          const existingReasoning = (msg as Record<string, unknown>).reasoning_content;
+          reasoningContent = typeof existingReasoning === "string" && existingReasoning
+            ? `${existingReasoning}\n${stripped.reasoningContent}`
+            : stripped.reasoningContent;
+        }
         cotMarkersStripped = true;
         console.debug(`makora: [GLM 5.1] stripped leaked chain-of-thought markers from assistant content`);
       }

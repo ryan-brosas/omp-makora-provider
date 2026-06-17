@@ -78,6 +78,16 @@ describe("GLM 5.1 leaked chain-of-thought marker stripping", () => {
     expect(textContent(message)).not.toMatch(/ thinking| response/);
   });
 
+  it("appends leaked reasoning to existing reasoning_content", () => {
+    const msg = {
+      ...assistantMessage(GLM_5_1_ID, " thinking\nleaked reasoning\n response\nVisible answer."),
+      reasoning_content: "parser reasoning",
+    };
+    const message = expectMessage(runHook(msg));
+    expect(textContent(message)).toBe("Visible answer.");
+    expect(message.reasoning_content).toBe("parser reasoning\nleaked reasoning");
+  });
+
   it("passes through messages with neither marker unchanged", () => {
     const msg = assistantMessage(GLM_5_1_ID, "Visible answer without leaked markers.");
     expect(runHook(msg)).toBeUndefined();
