@@ -262,13 +262,43 @@ async function loginMakora(callbacks: MakoraLoginCallbacks): Promise<MakoraOAuth
   await validateMakoraApiKey(apiKey, callbacks.signal);
   return makeStaticCredentials(apiKey);
 }
+// ─── Model IDs ───────────────────────────────────────────────────────────────
 
 const DS_PRO_ID = "deepseek-ai/DeepSeek-V4-Pro";
 const DS_FLASH_ID = "deepseek-ai/DeepSeek-V4-Flash";
 const MINIMAX_M3_ID = "MiniMaxAI/MiniMax-M3-MXFP8";
 
+const GLM_5_1_ID = "zai-org/GLM-5.1-FP8";
+const KIMI_K2_6_ID = "nvidia/Kimi-K2.6-NVFP4";
+const KIMI_K2_7_ID = "moonshotai/Kimi-K2.7-Code";
+const QWEN_3_6_27B_ID = "unsloth/Qwen3.6-27B-NVFP4";
+const QWEN_3_6_35B_ID = "unsloth/Qwen3.6-35B-A3B-NVFP4";
+
 const DS_VLLM_MODELS = new Set([DS_PRO_ID, DS_FLASH_ID]);
 const ENABLE_THINKING_VLLM_MODELS = new Set([MINIMAX_M3_ID]);
+
+// Models whose vLLM streaming parser is broken — tool calls arrive as raw text
+const TOOL_CALL_REPAIR_MODELS = new Set([
+  GLM_5_1_ID,
+  KIMI_K2_6_ID,
+  KIMI_K2_7_ID,
+  QWEN_3_6_27B_ID,
+  QWEN_3_6_35B_ID,
+]);
+
+// Models where we must disable native tool_choice so raw tokens pass through
+const DISABLE_TOOL_CHOICE_MODELS = new Set([
+  KIMI_K2_6_ID,
+  KIMI_K2_7_ID,
+  QWEN_3_6_27B_ID,
+  QWEN_3_6_35B_ID,
+]);
+
+// GLM 5.1: assistant messages with tool_calls crash vLLM (500).
+// We must strip tool_calls and convert back to <tool_call> XML on follow-up requests.
+const GLM_TOOL_CALL_STRIP_MODELS = new Set([GLM_5_1_ID]);
+
+// ─── vLLM thinking param rewrite ────────────────────────────────────────────
 
 /**
  * Intercept the request payload for models that need vLLM-specific thinking
@@ -276,15 +306,7 @@ const ENABLE_THINKING_VLLM_MODELS = new Set([MINIMAX_M3_ID]);
  *
  * pi's "deepseek" thinkingFormat sends `thinking: { type: "enabled" }` which
  * is the official DeepSeek API format — but Makora's vLLM deployment ignores
- * it. vLLM requires different params depending on the model:
- *   - DS V4 Pro:  `chat_template_kwargs: { thinking: true }` + `reasoning_effort`
- *   - DS V4 Flash: `include_reasoning: true` + `chat_template_kwargs: { thinking: true }`
- *     + `reasoning_effort`. `include_reasoning` alone returns `reasoning: null`
- *     on this vLLM build — both params are required.
- *   - MiniMax M3: `chat_template_kwargs: { enable_thinking: true }` +
- *     `reasoning_effort`. Returns `reasoning_content` field.
- *
- * This hook rewrites the payload accordingly.
+ * it. vLLM requires different params depending on the model.
  */
 function rewriteVllmPayload(payload: Record<string, unknown>): Record<string, unknown> {
   const model = payload.model as string | undefined;
@@ -293,30 +315,197 @@ function rewriteVllmPayload(payload: Record<string, unknown>): Record<string, un
   const p = { ...payload };
 
   if (DS_VLLM_MODELS.has(model)) {
-    // Remove the DeepSeek API-style `thinking` param that vLLM ignores
     delete p.thinking;
-
     if (model === DS_PRO_ID) {
-      // DS Pro: chat_template_kwargs.thinking + reasoning_effort
       const ctq = (p.chat_template_kwargs as Record<string, unknown>) ?? {};
       p.chat_template_kwargs = { ...ctq, thinking: true };
     } else if (model === DS_FLASH_ID) {
-      // DS Flash: include_reasoning + chat_template_kwargs.thinking + reasoning_effort
-      // vLLM requires *both* include_reasoning and chat_template_kwargs.thinking:
-      // include_reasoning alone returns reasoning: null.
       p.include_reasoning = true;
       const ctq = (p.chat_template_kwargs as Record<string, unknown>) ?? {};
       p.chat_template_kwargs = { ...ctq, thinking: true };
     }
   } else if (ENABLE_THINKING_VLLM_MODELS.has(model)) {
-    // Models using chat_template_kwargs.enable_thinking (e.g. MiniMax M3)
     delete p.thinking;
     const ctq = (p.chat_template_kwargs as Record<string, unknown>) ?? {};
     p.chat_template_kwargs = { ...ctq, enable_thinking: true };
   }
 
+  // Kimi K2.6 / K2.7 / Qwen 3.6: vLLM streaming tool_choice is broken.
+  // Disable native tool_choice and let raw tokens through as text.
+  if (DISABLE_TOOL_CHOICE_MODELS.has(model)) {
+    p.tool_choice = "none";
+    p.skip_special_tokens = false;
+  }
+
   return p;
 }
+
+// ─── Tool call text parsers ───────────────────────────────────────────────
+
+interface ParsedToolCall {
+  name: string;
+  arguments: Record<string, unknown>;
+}
+
+/** GLM 5.1 outputs Zhipu's native <tool_call> XML format as raw text. */
+function parseGlmToolCalls(text: string): ParsedToolCall[] {
+  const results: ParsedToolCall[] = [];
+  const regex = /<tool_call>\s*<tool_name>([^<]+)<\/tool_name>\s*<parameters>([\s\S]*?)<\/parameters>\s*<\/tool_call>/g;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    const name = match[1].trim();
+    const rawArgs = match[2].trim();
+    try {
+      const args = JSON.parse(rawArgs);
+      if (typeof args === "object" && args !== null && !Array.isArray(args)) {
+        results.push({ name, arguments: args as Record<string, unknown> });
+      }
+    } catch {
+      // Malformed JSON — skip this tool call
+    }
+  }
+  return results;
+}
+
+/** Kimi K2.6 uses <|tool_call_begin|>...<|tool_call_end|> tokens. */
+function parseKimiToolCalls(text: string): ParsedToolCall[] {
+  const results: ParsedToolCall[] = [];
+  const regex = /<\|tool_call_begin\|>([^\n]+)\n([\s\S]*?)<\|tool_call_end\|>/g;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    const name = match[1].trim();
+    const rawArgs = match[2].trim();
+    try {
+      const args = JSON.parse(rawArgs);
+      if (typeof args === "object" && args !== null && !Array.isArray(args)) {
+        results.push({ name, arguments: args as Record<string, unknown> });
+      }
+    } catch {
+      // Malformed JSON — skip
+    }
+  }
+  return results;
+}
+
+/** Qwen 3.6 uses hermes-style <function=name>...</function> XML, sometimes with █ delimiters. */
+function parseQwenToolCalls(text: string): ParsedToolCall[] {
+  const results: ParsedToolCall[] = [];
+  // Strip █ delimiters that sometimes appear
+  const cleaned = text.replace(/█/g, "");
+  const regex = /<function=([^>]+)>([\s\S]*?)<\/function>/g;
+  let match;
+  while ((match = regex.exec(cleaned)) !== null) {
+    const name = match[1].trim();
+    const rawArgs = match[2].trim();
+    try {
+      const args = JSON.parse(rawArgs);
+      if (typeof args === "object" && args !== null && !Array.isArray(args)) {
+        results.push({ name, arguments: args as Record<string, unknown> });
+      }
+    } catch {
+      // Malformed JSON — skip
+    }
+  }
+  return results;
+}
+
+function parseToolCallsFromText(model: string, text: string): ParsedToolCall[] {
+  if (model === GLM_5_1_ID) return parseGlmToolCalls(text);
+  if (model === KIMI_K2_6_ID || model === KIMI_K2_7_ID) return parseKimiToolCalls(text);
+  if (model === QWEN_3_6_27B_ID || model === QWEN_3_6_35B_ID) return parseQwenToolCalls(text);
+  return [];
+}
+
+// ─── GLM 5.1 tool_calls → XML converter ──────────────────────────────────
+
+/** Convert ToolCall blocks back to GLM's native <tool_call> XML format. */
+function toolCallsToGlmXml(toolCalls: Array<{ name: string; arguments: Record<string, unknown> }>): string {
+  return toolCalls.map(tc => {
+    const argsJson = JSON.stringify(tc.arguments);
+    return `<tool_call>\n<tool_name>${tc.name}</tool_name>\n<parameters>${argsJson}</parameters>\n</tool_call>`;
+  }).join("\n");
+}
+
+// ─── Message repair helpers ──────────────────────────────────────────────
+
+interface ContentBlock {
+  type: string;
+  [key: string]: unknown;
+}
+
+/** Check if an assistant message already has properly parsed ToolCall blocks. */
+function hasToolCallBlocks(content: ContentBlock[]): boolean {
+  return content.some(block => block.type === "toolCall");
+}
+
+/** Extract concatenated text from TextContent blocks. */
+function extractText(content: ContentBlock[]): string {
+  return content
+    .filter(block => block.type === "text")
+    .map(block => (block as { text: string }).text)
+    .join("");
+}
+
+/** Build a new content array with raw tool call text replaced by ToolCall blocks. */
+function buildRepairedContent(
+  original: ContentBlock[],
+  parsed: ParsedToolCall[],
+  textBeforeTools: string,
+): ContentBlock[] {
+  const result: ContentBlock[] = [];
+
+  // Keep non-text blocks (thinking, etc.) and pre-tool text
+  let addedText = false;
+  for (const block of original) {
+    if (block.type === "text") {
+      if (!addedText) {
+        if (textBeforeTools) {
+          result.push({ type: "text", text: textBeforeTools });
+        }
+        addedText = true;
+      }
+      // Skip original text — replaced below
+    } else {
+      result.push(block);
+    }
+  }
+  if (!addedText && textBeforeTools) {
+    result.push({ type: "text", text: textBeforeTools });
+  }
+
+  // Append parsed tool calls
+  for (let i = 0; i < parsed.length; i++) {
+    const tc = parsed[i];
+    result.push({
+      type: "toolCall",
+      id: `call_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 8)}`,
+      name: tc.name,
+      arguments: tc.arguments,
+    });
+  }
+
+  return result;
+}
+
+/** Find where tool call tokens begin in text. Returns text before the first tool call marker. */
+function splitBeforeTools(model: string, text: string): string {
+  if (model === GLM_5_1_ID) {
+    const idx = text.indexOf("<tool_call>");
+    return idx >= 0 ? text.slice(0, idx).trimEnd() : text;
+  }
+  if (model === KIMI_K2_6_ID || model === KIMI_K2_7_ID) {
+    const idx = text.indexOf("<|tool_call_begin|>");
+    return idx >= 0 ? text.slice(0, idx).trimEnd() : text;
+  }
+  if (model === QWEN_3_6_27B_ID || model === QWEN_3_6_35B_ID) {
+    const cleaned = text.replace(/█/g, "");
+    const idx = cleaned.indexOf("<function=");
+    return idx >= 0 ? text.slice(0, idx).trimEnd() : text;
+  }
+  return text;
+}
+
+// ─── Provider entry point ──────────────────────────────────────────────────
 
 export default function (pi: ExtensionAPI) {
   const embeddedModels = loadJson<JsonModel[]>("models.json");
@@ -327,9 +516,6 @@ export default function (pi: ExtensionAPI) {
 
   const apiKey = resolveMakoraApiKey();
 
-  // Only install an explicit env override. Without this, OMP auth storage from
-  // `/login makora` owns credentials; we must not pass a placeholder string
-  // that would become a literal bearer token.
   pi.registerProvider(PROVIDER_ID, {
     name: "Makora",
     baseUrl: BASE_URL,
@@ -348,10 +534,77 @@ export default function (pi: ExtensionAPI) {
     },
   });
 
+  // vLLM thinking param rewrites + tool_choice disable for Kimi/Qwen
   pi.on("before_provider_request", (event) => {
     const payload = event.payload as Record<string, unknown> | undefined;
     if (!payload || typeof payload.model !== "string") return;
     return rewriteVllmPayload(payload);
+  });
+
+  // Parse raw tool call tokens into proper ToolCall blocks after each message
+  pi.on("message_end", (event) => {
+    const msg = event.message;
+    if (msg.role !== "assistant") return;
+
+    const model = (msg as Record<string, unknown>).model as string | undefined;
+    if (!model || !TOOL_CALL_REPAIR_MODELS.has(model)) return;
+
+    const content = msg.content as ContentBlock[];
+    if (hasToolCallBlocks(content)) return; // already parsed — nothing to do
+
+    const text = extractText(content);
+    if (!text) return;
+
+    const parsed = parseToolCallsFromText(model, text);
+    if (parsed.length === 0) return;
+
+    const textBefore = splitBeforeTools(model, text);
+    const repaired = buildRepairedContent(content, parsed, textBefore);
+
+    return {
+      message: {
+        ...msg,
+        content: repaired,
+      } as typeof msg,
+    };
+  });
+
+  // GLM 5.1: strip tool_calls from assistant messages before follow-up requests.
+  // vLLM crashes (500) on any assistant message containing a tool_calls field.
+  pi.on("context", (event) => {
+    const messages = event.messages;
+    let changed = false;
+
+    const repaired = messages.map((msg) => {
+      if (msg.role !== "assistant") return msg;
+
+      const model = (msg as Record<string, unknown>).model as string | undefined;
+      if (!model || !GLM_TOOL_CALL_STRIP_MODELS.has(model)) return msg;
+
+      const content = msg.content as ContentBlock[];
+      const toolCalls = content.filter(block => block.type === "toolCall");
+      if (toolCalls.length === 0) return msg;
+
+      // Convert ToolCall blocks back to <tool_call> XML text
+      const xmlText = toolCallsToGlmXml(toolCalls.map(tc => ({
+        name: (tc as { name: string }).name,
+        arguments: (tc as { arguments: Record<string, unknown> }).arguments,
+      })));
+
+      // Keep non-toolCall blocks, append XML as text
+      const nonToolBlocks = content.filter(block => block.type !== "toolCall");
+      const newContent = [
+        ...nonToolBlocks,
+        { type: "text", text: xmlText },
+      ];
+
+      changed = true;
+      return { ...msg, content: newContent } as typeof msg;
+    });
+
+    if (changed) {
+      return { messages: repaired };
+    }
   });
 }
 
