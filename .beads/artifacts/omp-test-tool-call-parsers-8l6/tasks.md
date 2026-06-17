@@ -1,74 +1,95 @@
+---
+purpose: Task decomposition with dependency tracking
+updated: 2026-06-17
+---
+
 # Tasks: omp-test-tool-call-parsers-8l6
 
-## Wave 1: Parser unit tests (parallel-safe, no deps)
+## Wave 1: Code Fixes (Parallel)
 
-### T1.1 — parseGlmToolCalls tests
-- [ ] Single tool call: `<tool_call>\n<tool_name>read</tool_name>\n<parameters>{"path":"/foo"}</parameters>\n</tool_call>`
-- [ ] Multiple tool calls in one text block
-- [ ] No tool call markers → empty array
-- [ ] Empty string input → empty array
-- [ ] Malformed JSON in parameters → skipped (no crash)
-- [ ] Real-world GLM output example
+### 1.1 Fix `splitBeforeTools` Qwen index bug
 
-### T1.2 — parseKimiToolCalls tests
-- [ ] Single tool call: `<|tool_call_begin|>read\n{"path":"/foo"}<|tool_call_end|>`
-- [ ] Multiple tool calls in one text block
-- [ ] No tool call markers → empty array
-- [ ] Empty string input → empty array
-- [ ] Malformed JSON in args → skipped (no crash)
-- [ ] Real-world Kimi output example
+```yaml
+depends_on: []
+parallel: true
+conflicts_with: []
+files: ["index.ts"]
+estimated_minutes: 5
+```
 
-### T1.3 — parseQwenToolCalls tests
-- [ ] Single tool call: `<function=read>{"path":"/foo"}</function>`
-- [ ] Multiple tool calls separated by `█` delimiter
-- [ ] Multiple tool calls without delimiter
-- [ ] No tool call markers → empty array
-- [ ] Empty string input → empty array
-- [ ] Malformed JSON in args → skipped (no crash)
-- [ ] `█` before first function call → still parses correctly
-- [ ] Real-world Qwen output example
+- [ ] In `splitBeforeTools`, Qwen branch: compute `idx` from original `text` (not `█`-cleaned text), then slice from original
+- [ ] Current bug: `cleaned.indexOf("<function=")` gives wrong index when `█` appears before `<function=`, causing text to be trimmed from wrong position in the original string
+- [ ] Fix: `const idx = text.indexOf("<function=")` on original text, `return idx >= 0 ? text.slice(0, idx).trimEnd() : text`
 
-### T1.4 — GLM round-trip test
-- [ ] Parse GLM XML → convert to tool calls → convert back to XML → parse again → identical tool calls
+### 1.2 Wrap `loadJson` in try/catch with defaults
 
-### T1.5 — splitBeforeTools tests
-- [ ] GLM: text before `<tool_call>` is preserved, tool marker text is trimmed
-- [ ] Kimi: text before `<|tool_call_begin|>` is preserved
-- [ ] Qwen: text before `<function=` is preserved (with and without `█`)
-- [ ] Text with no tool markers → returns original text unchanged
-- [ ] Text starting with tool marker → returns empty string
-- [ ] Qwen: `█` in text before first `<function=` → correctly handled
+```yaml
+depends_on: []
+parallel: true
+conflicts_with: []
+files: ["index.ts"]
+estimated_minutes: 10
+```
 
-### T1.6 — buildRepairedContent + hasToolCallBlocks tests
-- [ ] hasToolCallBlocks true when content has toolCall block
-- [ ] hasToolCallBlocks false for text-only content
-- [ ] buildRepairedContent: text blocks replaced, non-text preserved, tool calls appended
-- [ ] buildRepairedContent: content with only tool calls (no pre-text)
+- [ ] Wrap `loadJson` calls in the export default function in try/catch
+- [ ] `custom-models.json` missing/corrupt → default to `[]`
+- [ ] `patch.json` missing/corrupt → default to `{}`
+- [ ] `models.json` missing/corrupt → re-throw (required file, should not default)
+- [ ] Provider starts successfully with both optional files deleted
 
-## Wave 2: Code fixes
+### 1.3 Add Kimi K2.7 Code to test-reasoning.ts MODELS array
 
-### T2.1 — Fix splitBeforeTools Qwen
-- [ ] Use original text index for slice, not cleaned text
-- [ ] Test passes with `█` before `<function=` case
+```yaml
+depends_on: []
+parallel: true
+conflicts_with: []
+files: ["test-reasoning.ts"]
+estimated_minutes: 5
+```
 
-### T2.2 — Graceful loadJson error handling
-- [ ] Missing custom-models.json → defaults to []
-- [ ] Missing patch.json → defaults to {}
-- [ ] Missing models.json → logs error (this is fatal)
-- [ ] Malformed JSON → logs warning, uses default
+- [ ] Add entry for `moonshotai/Kimi-K2.7-Code` matching existing model entry patterns
+- [ ] Use `reasoning` as response field (same as Kimi K2.6)
+- [ ] Use `chat_template_kwargs: { enable_thinking: true }` payload
+- [ ] Name: "Kimi K2.7 Code"
 
-## Wave 3: Integration + verification
+## Wave 2: Test Runner (Sequential — single file)
 
-### T3.1 — Add Kimi K2.7 Code to test-reasoning.ts
-- [ ] Add `moonshotai/Kimi-K2.7-Code` entry to MODELS array
-- [ ] Matches Kimi K2.6 NVFP4 pattern (reasoningResponseField: "reasoning", enable_thinking payload)
+### 2.1 Write `scripts/test-parsers.ts`
 
-### T3.2 — Run full test suite
-- [ ] `npx tsx scripts/test-parsers.ts` exits 0
+```yaml
+depends_on: ["1.1", "1.2", "1.3"]
+parallel: false
+conflicts_with: []
+files: ["scripts/test-parsers.ts"]
+estimated_minutes: 30
+```
 
-### T3.3 — Provider graceful startup verification
-- [ ] Move custom-models.json aside → provider starts
-- [ ] Move patch.json aside → provider starts
+- [ ] Write zero-dependency test runner with inline parser functions (import from index.ts via dynamic import or inline)
+- [ ] Test: `parseGlmToolCalls` — single tool call, multiple tool calls, empty input, whitespace-only, no markers
+- [ ] Test: `parseGlmToolCalls` — malformed JSON in one call (other still extracted)
+- [ ] Test: `parseKimiToolCalls` — single, multiple, empty, whitespace, no markers, malformed JSON
+- [ ] Test: `parseQwenToolCalls` — single, multiple, empty, whitespace, no markers, malformed JSON
+- [ ] Test: `parseQwenToolCalls` — `█` delimiter variants (before first call, between calls, after last call)
+- [ ] Test: `toolCallsToGlmXml` → `parseGlmToolCalls` round-trip
+- [ ] Test: `splitBeforeTools` — GLM, Kimi, Qwen with tool markers present
+- [ ] Test: `splitBeforeTools` — GLM, Kimi, Qwen with NO tool markers (returns full text)
+- [ ] Test: `splitBeforeTools` Qwen — `█` before `<function=` (verifies fix from 1.1)
+- [ ] Test: `buildRepairedContent` — non-text blocks preserved, textBeforeTools placed, tool calls appended
+- [ ] Test: `hasToolCallBlocks` — true/false cases
+- [ ] Assert helper: `assert(condition, message)` with pass/fail counting
+- [ ] Exit code 0 on all-pass, 1 on any failure
+- [ ] Run with `npx tsx scripts/test-parsers.ts`
 
-### T3.4 — Final review
-- [ ] All 12 PRD acceptance criteria confirmed
+## Verification
+
+### 3.1 Full verification
+
+```yaml
+depends_on: ["2.1"]
+parallel: false
+```
+
+- [ ] `npx tsx scripts/test-parsers.ts` — all 20+ tests pass
+- [ ] `npx tsc --noEmit index.ts test-reasoning.ts scripts/test-parsers.ts` — no type errors
+- [ ] Delete `custom-models.json`, verify provider loads (or at minimum type-check passes)
+- [ ] Delete `patch.json`, verify provider loads (or at minimum type-check passes)

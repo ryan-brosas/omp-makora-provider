@@ -1,70 +1,63 @@
 ---
-purpose: Implementation plan for a bead
-bead: omp-test-tool-call-parsers-8l6
+purpose: Wave-sequenced implementation plan
 updated: 2026-06-17
 ---
 
-# Plan: Add test coverage for tool call parsers and fix edge cases
+# Plan: omp-test-tool-call-parsers-8l6
+
+**Goal:** All parser functions have comprehensive test coverage, edge-case bugs are fixed, and the provider is resilient to missing config files.
 
 ## Graph Context
 
-- **Blast radius:** `index.ts` (parser functions, loadJson, splitBeforeTools), `scripts/test-parsers.ts` (NEW), `test-reasoning.ts` (add Kimi K2.7)
-- **Unblocks:** Confidence to refactor parsers, safe model syncs, visibility into regressions
-- **Forecast:** 45 min — 3 waves, all parallel-safe within wave
+- **Blast radius:** `index.ts`, `scripts/test-parsers.ts` (NEW), `test-reasoning.ts`
+- **Unblocks:** None (no downstream beads)
+- **Blocked by:** None (no upstream dependencies)
+- **Critical path:** No — orphan bead, sole node in graph
+- **Forecast:** ~66 min (bv), PRD estimate 45 min. No parallelizable subtracks (single-file ownership).
+- **Capacity:** 1 bead open, 66 serial minutes, 0% parallelizable (single bead).
+- **Graph position:** Keystone (PageRank 1.0), influencer (1.0), slack=0. No cycles, no articulation points.
 
 ## Observable Truths
 
-1. Parser functions are pure — no side effects, no API calls, deterministic
-2. All 3 parser types share the same interface: `(text: string) => ParsedToolCall[]`
-3. `loadJson` is synchronous — wrap pattern is identical for all 3 call sites
-4. Kimi K2.7 Code test entry mirrors Kimi K2.6 NVFP4 exactly
-5. Zero-dependency test runner avoids introducing `package.json` changes
+What must be TRUE for the goal to be achieved:
+
+1. `npx tsx scripts/test-parsers.ts` exits 0 with 20+ passing tests covering GLM, Kimi, Qwen parsers, toolCallsToGlmXml, splitBeforeTools, buildRepairedContent, and hasToolCallBlocks
+2. `parseQwenToolCalls` correctly extracts tool calls from text containing `█` delimiters anywhere (before, between, after function blocks)
+3. `splitBeforeTools` for Qwen models computes text index from original text, not `█`-cleaned text
+4. Provider starts successfully with `custom-models.json` deleted (defaults to `[]`)
+5. Provider starts successfully with `patch.json` deleted (defaults to `{}`)
+6. `test-reasoning.ts` includes `moonshotai/Kimi-K2.7-Code` entry matching existing model patterns
+7. All 8 models in test-reasoning.ts pass reasoning checks
+
+## Required Artifacts
+
+| Artifact | Provides | Path | Status |
+|----------|----------|------|--------|
+| Test runner | Parser unit tests (zero-dependency) | `scripts/test-parsers.ts` | Need |
+| Fixed index.ts | splitBeforeTools Qwen fix + loadJson try/catch | `index.ts` | Need |
+| Updated test-reasoning.ts | Kimi K2.7 Code entry | `test-reasoning.ts` | Need |
 
 ## Wave Structure
 
-### Wave 1: Parser unit tests (parallel-safe, no deps)
-**Files:** `scripts/test-parsers.ts` (NEW)
+| Wave | Tasks | Parallel? | Preconditions | Verification Gate |
+|------|-------|-----------|---------------|-------------------|
+| 1 | 1.1 Fix `splitBeforeTools` Qwen, 1.2 Wrap `loadJson` in try/catch, 1.3 Add Kimi K2.7 Code to test-reasoning.ts | Yes (3 separate functions/files) | None | `npx tsc --noEmit index.ts test-reasoning.ts` |
+| 2 | 2.1 Write test runner (scripts/test-parsers.ts) | No (single file, all tests) | Wave 1 complete | `npx tsx scripts/test-parsers.ts` exits 0 |
 
-Tasks:
-1. **T1.1** — Write `parseGlmToolCalls` tests (6 cases: single call, multi call, no call, empty text, malformed JSON skip, real-world example)
-2. **T1.2** — Write `parseKimiToolCalls` tests (6 cases: single call, multi call, no call, empty text, malformed JSON skip, real-world)
-3. **T1.3** — Write `parseQwenToolCalls` tests (8 cases: single call, multi call, no call, empty text, malformed JSON skip, █ delimiter between calls, █ before first call, real-world)
-4. **T1.4** — Write `toolCallsToGlmXml` round-trip test (parse → XML → parse produces identical results)
-5. **T1.5** — Write `splitBeforeTools` tests (4 cases per model: text+before tools, no tools, only tools, edge cases)
-6. **T1.6** — Write `buildRepairedContent` + `hasToolCallBlocks` tests
+## Tasks
 
-### Wave 2: Code fixes (depends on Wave 1 tests passing baseline)
-**Files:** `index.ts`
+Detailed task decomposition: see `tasks.md` in the same artifact directory.
 
-Tasks:
-7. **T2.1** — Fix `splitBeforeTools` Qwen: use original text for both index computation and slicing
-8. **T2.2** — Add try/catch around `loadJson` calls with defaults (`[]` for arrays, `{}` for objects)
-
-### Wave 3: Integration + verification (depends on Wave 2)
-**Files:** `index.ts`, `test-reasoning.ts`, `scripts/test-parsers.ts`
-
-Tasks:
-9. **T3.1** — Add Kimi K2.7 Code to `test-reasoning.ts` MODELS array
-10. **T3.2** — Run full test suite: `npx tsx scripts/test-parsers.ts`
-11. **T3.3** — Verify provider starts with missing JSON files (manual test: move custom-models.json aside)
-12. **T3.4** — Final review: confirm all 12 acceptance criteria from PRD are met
-
-## Delegation Packets
-
-None — all tasks are straightforward and don't require sub-agent spawning.
-
-## Verification Commands
+## Full Verification
 
 ```bash
-# Unit tests
+cd /home/ryan/repos/omp-makora-provider
+# Type check all files
+npx tsc --noEmit index.ts test-reasoning.ts scripts/test-parsers.ts
+
+# Run parser tests (20+ cases)
 npx tsx scripts/test-parsers.ts
 
-# Reasoning integration (requires API key)
-MAKORA_OPTIMIZE_TOKEN=$TOKEN npx tsx test-reasoning.ts
-
-# Graceful startup with missing files
-mv custom-models.json custom-models.json.bak && echo "Provider should start"; mv custom-models.json.bak custom-models.json
-
-# Lint
-br lint omp-test-tool-call-parsers-8l6 --json
+# Verify loadJson resilience
+# (manual: delete custom-models.json, verify provider loads)
 ```

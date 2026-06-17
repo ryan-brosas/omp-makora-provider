@@ -1,0 +1,2 @@
+[2026-06-17] Bead created: omp-tool-call-repair-hardening-307
+[2026-06-17] Worktree created: bead/omp-tool-call-repair-hardening-307
