@@ -557,8 +557,105 @@ function stripControlTokens(text: string): string {
   return cleaned;
 }
 
-// ─── Provider entry point ──────────────────────────────────────────────────
+// ─── GLM 5.1 leaked chain-of-thought cleanup ─────────────────────────────
 
+const GLM_THINKING_MARKER = " thinking";
+const GLM_RESPONSE_MARKER = " response";
+
+interface GlmCotStripResult {
+  content: ContentBlock[];
+  reasoningContent?: string;
+  changed: boolean;
+}
+
+/** Return true when an index falls inside a Markdown fenced code block. */
+function isInsideMarkdownFence(text: string, index: number): boolean {
+  const before = text.slice(0, index);
+  const fences = before.match(/```/g);
+  return (fences?.length ?? 0) % 2 === 1;
+}
+
+/** GLM response marker is emitted as a template sentinel, not prose text. */
+function findGlmResponseMarker(text: string, startIndex: number): number {
+  let searchFrom = startIndex;
+  while (searchFrom < text.length) {
+    const index = text.indexOf(GLM_RESPONSE_MARKER, searchFrom);
+    if (index < 0) return -1;
+    const next = text[index + GLM_RESPONSE_MARKER.length];
+    if (next === undefined || next === "\n" || next === "\r") {
+      return index;
+    }
+    searchFrom = index + GLM_RESPONSE_MARKER.length;
+  }
+  return -1;
+}
+
+/** Build a text-normalized content array while preserving non-text blocks. */
+function replaceTextContent(original: ContentBlock[], text: string): ContentBlock[] {
+  const result: ContentBlock[] = [];
+  let addedText = false;
+
+  for (const block of original) {
+    if (block.type === "text") {
+      if (!addedText) {
+        if (text) {
+          result.push({ ...block, text });
+        }
+        addedText = true;
+      }
+      continue;
+    }
+    result.push(block);
+  }
+
+  if (!addedText && text) {
+    result.unshift({ type: "text", text });
+  }
+
+  return result;
+}
+
+/**
+ * Strip leaked GLM 5.1 chat-template CoT markers from assistant content.
+ *
+ * vLLM builds without the GLM reasoning parser can return a single content
+ * string shaped like:
+ *   " thinking\n<private reasoning>\n response\n<assistant answer>"
+ *
+ * Only the complete, ordered marker pair is stripped. Partial leaks and marker
+ * pairs inside fenced code are left untouched to avoid corrupting legitimate
+ * visible text.
+ */
+function stripGlmCotMarkers(content: ContentBlock[]): GlmCotStripResult {
+  const text = extractText(content);
+  if (!text) return { content, changed: false };
+
+  const thinkingStart = text.indexOf(GLM_THINKING_MARKER);
+  const responseStart = findGlmResponseMarker(text, thinkingStart + GLM_THINKING_MARKER.length);
+
+  if (thinkingStart < 0 || responseStart < 0 || responseStart < thinkingStart) {
+    return { content, changed: false };
+  }
+
+  if (isInsideMarkdownFence(text, thinkingStart) || isInsideMarkdownFence(text, responseStart)) {
+    return { content, changed: false };
+  }
+
+  const thinkingEnd = thinkingStart + GLM_THINKING_MARKER.length;
+  const responseEnd = responseStart + GLM_RESPONSE_MARKER.length;
+  const prefix = text.slice(0, thinkingStart);
+  const reasoningContent = text.slice(thinkingEnd, responseStart).trim();
+  const responseContent = text.slice(responseEnd).trimStart();
+  const cleanedText = `${prefix}${responseContent}`;
+
+  return {
+    content: replaceTextContent(content, cleanedText),
+    reasoningContent: reasoningContent || undefined,
+    changed: true,
+  };
+}
+
+// ─── Provider entry point ──────────────────────────────────────────────────
 export default function (pi: ExtensionAPI) {
   const embeddedModels = loadJson<JsonModel[]>("models.json");
   const customModels = loadJson<JsonModel[]>("custom-models.json");
@@ -601,15 +698,55 @@ export default function (pi: ExtensionAPI) {
     const model = (msg as Record<string, unknown>).model as string | undefined;
     if (!model || !TOOL_CALL_REPAIR_MODELS.has(model)) return;
 
-    const content = msg.content as ContentBlock[];
-    if (hasToolCallBlocks(content)) return; // already parsed — nothing to do
+    let content = msg.content as ContentBlock[];
+    let reasoningContent: string | undefined;
+    let cotMarkersStripped = false;
+
+    if (model === GLM_5_1_ID) {
+      const stripped = stripGlmCotMarkers(content);
+      if (stripped.changed) {
+        content = stripped.content;
+        reasoningContent = stripped.reasoningContent;
+        cotMarkersStripped = true;
+        console.debug(`makora: [GLM 5.1] stripped leaked chain-of-thought markers from assistant content`);
+      }
+    }
+
+    if (hasToolCallBlocks(content)) {
+      if (!cotMarkersStripped) return; // already parsed — nothing else to do
+      return {
+        message: {
+          ...msg,
+          content,
+          ...(reasoningContent ? { reasoning_content: reasoningContent } : {}),
+        } as typeof msg,
+      };
+    }
 
     const text = extractText(content);
-    if (!text) return;
+    if (!text) {
+      if (!cotMarkersStripped) return;
+      return {
+        message: {
+          ...msg,
+          content,
+          ...(reasoningContent ? { reasoning_content: reasoningContent } : {}),
+        } as typeof msg,
+      };
+    }
 
     const parsed = parseToolCallsFromText(model, text);
     if (parsed.length === 0) {
       console.debug(`makora: [${model}] tool call repair returned empty — raw text may contain unrecognized format`);
+      if (cotMarkersStripped) {
+        return {
+          message: {
+            ...msg,
+            content,
+            ...(reasoningContent ? { reasoning_content: reasoningContent } : {}),
+          } as typeof msg,
+        };
+      }
       return;
     }
 
@@ -624,6 +761,7 @@ export default function (pi: ExtensionAPI) {
       message: {
         ...msg,
         content: repaired,
+        ...(reasoningContent ? { reasoning_content: reasoningContent } : {}),
       } as typeof msg,
     };
   });

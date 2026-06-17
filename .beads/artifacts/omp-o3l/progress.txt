@@ -1,17 +1,42 @@
 omp-o3l: Strip leaked GLM 5.1 chain-of-thought content markers from assistant messages
 =====================================================================
 
-STATUS: Artifacts complete — PRD + Plan written, awaiting /ship
+STATUS: /ship implemented — ready for /verify
 
-PHASE: /plan
+PHASE: /ship
 
-COMPLETED:
+COMPLETED ARTIFACTS:
 - [x] PRD (prd.md, prd.json)
 - [x] Decisions (decisions.md)
 - [x] Plan (plan.md)
 - [x] Tasks (tasks.md)
 - [x] Context capsule (context-capsule.md)
 
+IMPLEMENTATION COMPLETED:
+- [x] Added GLM 5.1 CoT marker constants for ` thinking` and ` response`
+- [x] Added `stripGlmCotMarkers()` helper near the existing control-token cleanup
+- [x] Extracted leaked reasoning between complete ordered marker pairs
+- [x] Moved extracted reasoning into `reasoning_content` on repaired messages
+- [x] Replaced visible content with the post-` response` assistant answer
+- [x] Preserved non-text content blocks while normalizing leaked text blocks
+- [x] Left partial leaks unchanged as planned fallback behavior
+- [x] Left marker pairs inside fenced code blocks unchanged to avoid corrupting legitimate text
+- [x] Integrated stripping into the existing `message_end` hook before tool-call parsing
+- [x] Kept behavior gated to `zai-org/GLM-5.1-FP8`
+- [x] Preserved existing Kimi/Qwen/other model tool-call repair behavior
+- [x] Preserved existing GLM tool-call repair after cleaned content is produced
+- [x] Added unit coverage in `tests/glm-cot-strip.test.ts`
+
+VERIFICATION COMPLETED:
+- [x] `npx vitest run --reporter verbose` — PASS, 9 tests passed
+- [x] `npm run build` — PASS (`nothing to build`)
+- [x] `npm run check` — PASS (`nothing to check`)
+- [x] `br dep cycles --json --actor mimo1` — PASS, zero cycles
+- [x] `br lint omp-o3l --json --actor mimo1` — PASS, zero issues after updating bead metadata with reproduction steps and acceptance criteria
+
+NOTES:
+- `br update --actor mimo1 omp-o3l --status in_progress --claim --json` reported the bead was already assigned to `ryan`; implementation proceeded on the in-progress bead.
+- The broader working tree contained pre-existing unrelated `.pi/` deletions and untracked `.omp/` files before this /ship work began. They were not edited for this bead.
+
 NEXT:
-- Run /ship to implement
-- Then /verify
+- Run /verify omp-o3l
