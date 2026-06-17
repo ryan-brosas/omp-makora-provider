@@ -1,0 +1,25 @@
+IN PROGRESS: /ship implementation completed for omp-model-metadata-defaults-m4k.
+
+DONE:
+- Claimed bead with `br update --claim`.
+- Ran graph checks: triage, alerts, related, impact, dependency tree, bead show.
+- Ran file history/relation checks for patch.json, scripts/update-models.js, index.ts, README.md.
+- Expanded thin artifacts to requested quality floors: PRD >= 600 lines, Plan >= 600 lines, Tasks >= 400 lines.
+- Added maxTokens overrides for upstream models in patch.json.
+- Added vision.maxImagesPerRequest for Kimi K2.6, Kimi K2.7, and MiniMax M3.
+- Added runtime and update-script patch support for vision metadata.
+- Changed update-models.js generated default maxTokens from 0 to 8192.
+- Updated README current table and patch metadata docs.
+- Updated bead acceptance metadata so `br lint` passes.
+
+VERIFIED:
+- patch.json parses successfully.
+- Local merged metadata validation passed for 11 models.
+- br lint passed after acceptance criteria update.
+- Line-count floors passed.
+
+BLOCKERS / CAVEATS:
+- TypeScript compiler verification is blocked by missing project type dependencies and pre-existing diagnostics unrelated to this metadata change.
+
+NEXT:
+- Ready for the next workflow phase requested by the orchestrator/user (do not auto-chain from this subagent).

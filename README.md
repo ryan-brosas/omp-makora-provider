@@ -18,17 +18,17 @@ _DeepSeek V4, Kimi K2.6, GLM 5.1, Qwen 3.6 — with client-side tool call repair
 <!-- MODELS_TABLE_START -->
 | Model | ID | Reasoning | Notes |
 |-------|----|-----------|-------|
-| DeepSeek V4 Flash | `deepseek-ai/DeepSeek-V4-Flash` | Yes | `include_reasoning` + `chat_template_kwargs.thinking` via `before_provider_request` payload rewrite; returns `reasoning` field |
-| DeepSeek V4 Pro | `deepseek-ai/DeepSeek-V4-Pro` | Yes | `chat_template_kwargs.thinking` via `before_provider_request` payload rewrite; returns `reasoning_content` field |
-| GLM 5.1 FP8 | `zai-org/GLM-5.1-FP8` | Yes | `enable_thinking` via `qwen-chat-template`; returns `reasoning_content` field; client-side tool call parsing (vLLM streaming parser bypass) |
-| GPT-OSS 120B | `openai/gpt-oss-120b` | Yes | Reasoning always on |
-| Kimi K2.6 NVFP4 | `nvidia/Kimi-K2.6-NVFP4` | Yes | Reasoning on by default; client-side tool call parsing (vLLM streaming parser bypass) |
-| Kimi K2.7 Code | `moonshotai/Kimi-K2.7-Code` | Yes | Reasoning on by default; client-side tool call parsing (vLLM streaming parser bypass) |
-| Llama 3.3 70B FP8 | `amd/Llama-3.3-70B-Instruct-FP8-KV` | No |  |
-| Llama 3.3 70B Instruct | `meta-llama/Llama-3.3-70B-Instruct` | No |  |
-| MiniMax M3 MXFP8 | `MiniMaxAI/MiniMax-M3-MXFP8` | Yes | Reasoning via `chat_template_kwargs.enable_thinking`; returns `reasoning_content` field |
-| Qwen 3.6 27B NVFP4 | `unsloth/Qwen3.6-27B-NVFP4` | Yes | `enable_thinking` via `qwen-chat-template`; client-side tool call parsing (vLLM streaming parser bypass) |
-| Qwen 3.6 35B A3B NVFP4 | `unsloth/Qwen3.6-35B-A3B-NVFP4` | Yes | `enable_thinking` via `qwen-chat-template`; client-side tool call parsing (vLLM streaming parser bypass) |
+| DeepSeek V4 Flash | `deepseek-ai/DeepSeek-V4-Flash` | Yes | maxTokens 32768; `include_reasoning` + `chat_template_kwargs.thinking` via `before_provider_request` payload rewrite; returns `reasoning` field |
+| DeepSeek V4 Pro | `deepseek-ai/DeepSeek-V4-Pro` | Yes | maxTokens 32768; `chat_template_kwargs.thinking` via `before_provider_request` payload rewrite; returns `reasoning_content` field |
+| GLM 5.1 FP8 | `zai-org/GLM-5.1-FP8` | Yes | maxTokens 16384; `enable_thinking` via `qwen-chat-template`; returns `reasoning_content` field; client-side tool call parsing (vLLM streaming parser bypass) |
+| GPT-OSS 120B | `openai/gpt-oss-120b` | Yes | maxTokens 16384; reasoning always on |
+| Kimi K2.6 NVFP4 | `nvidia/Kimi-K2.6-NVFP4` | Yes | maxTokens 16384; vision maxImagesPerRequest 5; reasoning on by default; client-side tool call parsing (vLLM streaming parser bypass) |
+| Kimi K2.7 Code | `moonshotai/Kimi-K2.7-Code` | Yes | maxTokens 16384; vision maxImagesPerRequest 5; reasoning on by default; client-side tool call parsing (vLLM streaming parser bypass) |
+| Llama 3.3 70B FP8 | `amd/Llama-3.3-70B-Instruct-FP8-KV` | No | maxTokens 16384; custom per-slug endpoint |
+| Llama 3.3 70B Instruct | `meta-llama/Llama-3.3-70B-Instruct` | No | maxTokens 8192; non-reasoning text-only model |
+| MiniMax M3 MXFP8 | `MiniMaxAI/MiniMax-M3-MXFP8` | Yes | maxTokens 16384; vision maxImagesPerRequest 5; reasoning via `chat_template_kwargs.enable_thinking`; returns `reasoning_content` field |
+| Qwen 3.6 27B NVFP4 | `unsloth/Qwen3.6-27B-NVFP4` | Yes | maxTokens 16384; `enable_thinking` via `qwen-chat-template`; client-side tool call parsing (vLLM streaming parser bypass) |
+| Qwen 3.6 35B A3B NVFP4 | `unsloth/Qwen3.6-35B-A3B-NVFP4` | Yes | maxTokens 16384; `enable_thinking` via `qwen-chat-template`; client-side tool call parsing (vLLM streaming parser bypass) |
 <!-- MODELS_TABLE_END -->
 
 ## Quickstart
@@ -80,6 +80,10 @@ Models are discovered from the Makora `/v1/models` API and stored in `models.jso
 | `custom-models.json` | Models not available via the API (e.g. per-slug endpoint models) |
 
 Models are loaded by merging `models.json` → apply `patch.json` → merge `custom-models.json`.
+
+### Patch metadata fields
+
+`patch.json` supports the same model metadata fields consumed by the provider, including `reasoning`, `input`, `contextWindow`, `maxTokens`, `vision`, `notes`, `thinkingLevelMap`, and `compat`. Use `maxTokens` for safe output caps because Makora model discovery does not report max output tokens. Use `vision.maxImagesPerRequest` for multimodal request limits when a model declares `input: ["text", "image"]`.
 
 ## Adding Custom Models
 

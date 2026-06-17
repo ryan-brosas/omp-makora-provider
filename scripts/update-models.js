@@ -114,7 +114,7 @@ function transformApiModel(apiModel) {
       cacheWrite: 0,
     },
     contextWindow,
-    maxTokens: 0,
+    maxTokens: 8192,
     compat: {
       supportsDeveloperRole: false,
       supportsStore: false,
@@ -132,6 +132,7 @@ function applyPatch(model, patch) {
   if (patch.input !== undefined) result.input = patch.input;
   if (patch.contextWindow !== undefined) result.contextWindow = patch.contextWindow;
   if (patch.maxTokens !== undefined) result.maxTokens = patch.maxTokens;
+  if (patch.vision !== undefined) result.vision = { ...patch.vision };
   if (patch.baseUrl !== undefined) result.baseUrl = patch.baseUrl;
   if (patch.notes !== undefined) result.notes = patch.notes;
   if (patch.thinkingLevelMap !== undefined) result.thinkingLevelMap = { ...patch.thinkingLevelMap };
@@ -195,7 +196,13 @@ function generateReadmeTable(models) {
 
   const rows = models.map(m => {
     const reasoning = m.reasoning ? 'Yes' : 'No';
-    const notes = m.notes || '';
+    const metadataNotes = [];
+    if (m.maxTokens) metadataNotes.push(`maxTokens ${m.maxTokens}`);
+    if (m.vision?.maxImagesPerRequest) {
+      metadataNotes.push(`vision maxImagesPerRequest ${m.vision.maxImagesPerRequest}`);
+    }
+    if (m.notes) metadataNotes.push(m.notes);
+    const notes = metadataNotes.join('; ');
     return `| ${m.name} | \`${m.id}\` | ${reasoning} | ${notes} |`;
   });
 

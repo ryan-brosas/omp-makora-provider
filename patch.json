@@ -12,7 +12,8 @@
     "compat": {
       "thinkingFormat": "deepseek",
       "supportsReasoningEffort": true
-    }
+    },
+    "maxTokens": 32768
   },
   "deepseek-ai/DeepSeek-V4-Pro": {
     "reasoning": true,
@@ -28,7 +29,8 @@
       "thinkingFormat": "deepseek",
       "supportsReasoningEffort": true,
       "requiresReasoningContentOnAssistantMessages": true
-    }
+    },
+    "maxTokens": 32768
   },
   "nvidia/Kimi-K2.6-NVFP4": {
     "reasoning": true,
@@ -44,6 +46,10 @@
     "compat": {
       "thinkingFormat": "qwen-chat-template",
       "supportsReasoningEffort": true
+    },
+    "maxTokens": 16384,
+    "vision": {
+      "maxImagesPerRequest": 5
     }
   },
   "openai/gpt-oss-120b": {
@@ -56,7 +62,8 @@
     "compat": {
       "thinkingFormat": "qwen-chat-template",
       "supportsReasoningEffort": true
-    }
+    },
+    "maxTokens": 16384
   },
   "unsloth/Qwen3.6-27B-NVFP4": {
     "reasoning": true,
@@ -68,7 +75,8 @@
     "compat": {
       "thinkingFormat": "qwen-chat-template",
       "supportsReasoningEffort": true
-    }
+    },
+    "maxTokens": 16384
   },
   "unsloth/Qwen3.6-35B-A3B-NVFP4": {
     "reasoning": true,
@@ -80,7 +88,8 @@
     "compat": {
       "thinkingFormat": "qwen-chat-template",
       "supportsReasoningEffort": true
-    }
+    },
+    "maxTokens": 16384
   },
   "MiniMaxAI/MiniMax-M3-MXFP8": {
     "reasoning": true,
@@ -100,6 +109,10 @@
       "thinkingFormat": "deepseek",
       "supportsReasoningEffort": true,
       "requiresReasoningContentOnAssistantMessages": true
+    },
+    "maxTokens": 16384,
+    "vision": {
+      "maxImagesPerRequest": 5
     }
   },
   "moonshotai/Kimi-K2.7-Code": {
@@ -116,6 +129,10 @@
     "compat": {
       "thinkingFormat": "qwen-chat-template",
       "supportsReasoningEffort": true
+    },
+    "maxTokens": 16384,
+    "vision": {
+      "maxImagesPerRequest": 5
     }
   },
   "zai-org/GLM-5.1-FP8": {
@@ -130,6 +147,10 @@
       "thinkingFormat": "qwen-chat-template",
       "supportsReasoningEffort": true,
       "zaiToolStream": true
-    }
+    },
+    "maxTokens": 16384
+  },
+  "meta-llama/Llama-3.3-70B-Instruct": {
+    "maxTokens": 8192
   }
 }
