@@ -1,0 +1,88 @@
+{
+  "bead_id": "omp-o3l",
+  "phase": "/ship",
+  "status": "implemented_ready_for_verify",
+  "completed_at": "2026-06-18T01:50:30+08:00",
+  "quality_gates": {
+    "prd_min_lines": 600,
+    "plan_min_lines": 600,
+    "tasks_min_lines": 400,
+    "observed_lines": {
+      "prd.md": 766,
+      "plan.md": 800,
+      "tasks.md": 1092
+    },
+    "passed": true
+  },
+  "scope": {
+    "implemented_requirements": [
+      "Strip complete ordered GLM 5.1 ` thinking` / ` response` marker pairs from assistant visible content.",
+      "Move non-empty leaked reasoning between markers to `reasoning_content`.",
+      "Leave empty private sections without `reasoning_content`.",
+      "Leave non-GLM, incomplete-marker, reversed-marker, and fenced-code marker text unchanged.",
+      "Run cleanup in the existing message_end hook before GLM tool-call repair.",
+      "Preserve GLM tool-call parsing after content cleanup."
+    ],
+    "out_of_scope_not_run": ["/review", "/close", "/pr"]
+  },
+  "files_changed_by_ship": [
+    "index.ts",
+    "tests/glm-cot-strip.test.ts",
+    ".beads/artifacts/omp-o3l/prd.md",
+    ".beads/artifacts/omp-o3l/plan.md",
+    ".beads/artifacts/omp-o3l/tasks.md",
+    ".beads/artifacts/omp-o3l/progress.txt",
+    ".beads/artifacts/omp-o3l/completion-evidence.json"
+  ],
+  "verification": [
+    {
+      "command": "wc -l .beads/artifacts/omp-o3l/prd.md .beads/artifacts/omp-o3l/plan.md .beads/artifacts/omp-o3l/tasks.md",
+      "result": "PASS: 766 / 800 / 1092 lines"
+    },
+    {
+      "command": "bv --robot-alerts --format json",
+      "result": "PASS: zero alerts"
+    },
+    {
+      "command": "br dep tree omp-o3l --json",
+      "result": "PASS: no blockers; bead remains in_progress"
+    },
+    {
+      "command": "npx vitest run tests/glm-cot-strip.test.ts --reporter verbose",
+      "result": "PASS: 1 test file passed, 10 tests passed"
+    },
+    {
+      "command": "npm run check",
+      "result": "PASS: package script completed (`nothing to check`)"
+    },
+    {
+      "command": "npm run build",
+      "result": "PASS: package script completed (`nothing to build`)"
+    },
+    {
+      "command": "br lint omp-o3l --json",
+      "result": "PASS: total 0, issues 0"
+    },
+    {
+      "command": "br dep cycles --json",
+      "result": "PASS: count 0 cycles"
+    }
+  ],
+  "commits": [
+    {
+      "sha": "3c6aea3",
+      "message": "fix: implement omp-o3l",
+      "summary": "Initial ship implementation: GLM CoT marker cleanup helper, message_end integration, tests, bead progress."
+    },
+    {
+      "sha": "8cb5ea2",
+      "message": "fix: implement omp-o3l",
+      "summary": "Expanded PRD/plan/tasks to quality gates and finalized progress; adjusted implementation/tests."
+    }
+  ],
+  "notes": [
+    "Existing unrelated working tree state was preserved: deleted .pi files and untracked .omp directory were present and not staged for this bead.",
+    "A temporary npm install side effect (node_modules/package-lock.json) was removed before completion.",
+    "The bead remains in_progress and ready for the next /verify phase."
+  ]
+}
