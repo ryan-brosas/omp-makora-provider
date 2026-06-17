@@ -31,8 +31,8 @@
  *     https://github.com/vllm-project/vllm/issues/31319
  *     Also: vLLM's streaming parser omits delta.tool_calls when the model
  *     calls tools, finishing with finish_reason: "tool_calls" but an empty
- *     delta. Setting zaiToolStream: true sends tool_stream: true in the
- *     request, which forces vLLM to use the explicit tool streaming path
+ *     delta. The before_provider_request hook sends tool_stream: true for
+ *     GLM 5.1, which forces vLLM to use the explicit tool streaming path
  *     that correctly emits tool call chunks.
  *   - GPT-OSS 120B: reasoning always on; returns `reasoning` field.
  *   - Kimi K2.6 NVFP4 / Kimi K2.7 Code: reasoning always on by default;
@@ -141,7 +141,10 @@ interface MakoraOAuthCredentials {
 }
 
 interface MakoraLoginCallbacks {
+  onAuth?(info: { url: string; instructions?: string }): void;
   onPrompt(prompt: { message: string; placeholder?: string; allowEmpty?: boolean }): Promise<string>;
+  onProgress?(message: string): void;
+  onManualCodeInput?(): Promise<string>;
   signal?: AbortSignal;
 }
 
@@ -543,7 +546,6 @@ function splitBeforeTools(model: string, text: string): string {
 const VLLM_CONTROL_TOKENS = [
   "<|im_start|>",
   "<|im_end|>",
-  "<|endoftext|>",
   "<|fim_prefix|>",
   "<|fim_suffix|>",
   "<|fim_middle|>",
@@ -723,38 +725,32 @@ export default function (pi: ExtensionAPI) {
 
     if (hasToolCallBlocks(content)) {
       if (!cotMarkersStripped) return; // already parsed — nothing else to do
-      return {
-        message: {
-          ...msg,
-          content,
-          ...(reasoningContent ? { reasoning_content: reasoningContent } : {}),
-        } as typeof msg,
-      };
+      // CoT was stripped but tool calls already exist — apply in place
+      (msg as Record<string, unknown>).content = content;
+      if (reasoningContent) {
+        (msg as Record<string, unknown>).reasoning_content = reasoningContent;
+      }
+      return;
     }
 
     const text = extractText(content);
     if (!text) {
       if (!cotMarkersStripped) return;
-      return {
-        message: {
-          ...msg,
-          content,
-          ...(reasoningContent ? { reasoning_content: reasoningContent } : {}),
-        } as typeof msg,
-      };
+      (msg as Record<string, unknown>).content = content;
+      if (reasoningContent) {
+        (msg as Record<string, unknown>).reasoning_content = reasoningContent;
+      }
+      return;
     }
 
     const parsed = parseToolCallsFromText(model, text);
     if (parsed.length === 0) {
       console.debug(`makora: [${model}] tool call repair returned empty — raw text may contain unrecognized format`);
       if (cotMarkersStripped) {
-        return {
-          message: {
-            ...msg,
-            content,
-            ...(reasoningContent ? { reasoning_content: reasoningContent } : {}),
-          } as typeof msg,
-        };
+        (msg as Record<string, unknown>).content = content;
+        if (reasoningContent) {
+          (msg as Record<string, unknown>).reasoning_content = reasoningContent;
+        }
       }
       return;
     }
@@ -766,13 +762,12 @@ export default function (pi: ExtensionAPI) {
     }
     const repaired = buildRepairedContent(content, parsed, textBeforeCleaned);
 
-    return {
-      message: {
-        ...msg,
-        content: repaired,
-        ...(reasoningContent ? { reasoning_content: reasoningContent } : {}),
-      } as typeof msg,
-    };
+    // Mutate msg in place — the extension runner discards return values from
+    // message_end handlers, so returning a new object is a no-op.
+    (msg as Record<string, unknown>).content = repaired;
+    if (reasoningContent) {
+      (msg as Record<string, unknown>).reasoning_content = reasoningContent;
+    }
   });
 
   // GLM 5.1: strip tool_calls from assistant messages before follow-up requests.

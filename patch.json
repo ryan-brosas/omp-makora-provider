@@ -145,8 +145,7 @@
     },
     "compat": {
       "thinkingFormat": "qwen-chat-template",
-      "supportsReasoningEffort": true,
-      "zaiToolStream": true
+      "supportsReasoningEffort": true
     },
     "maxTokens": 16384
   },
