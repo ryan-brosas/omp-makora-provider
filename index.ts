@@ -122,6 +122,9 @@ interface PatchEntry {
   };
   contextWindow?: number;
   maxTokens?: number;
+  vision?: {
+    maxImagesPerRequest?: number;
+  };
   baseUrl?: string;
   notes?: string;
   thinkingLevelMap?: Record<string, string | null>;
@@ -152,6 +155,7 @@ function applyPatch(model: JsonModel, patch: PatchEntry): JsonModel {
   if (patch.input !== undefined) result.input = patch.input;
   if (patch.contextWindow !== undefined) result.contextWindow = patch.contextWindow;
   if (patch.maxTokens !== undefined) result.maxTokens = patch.maxTokens;
+  if (patch.vision !== undefined) result.vision = { ...patch.vision };
   if (patch.baseUrl !== undefined) result.baseUrl = patch.baseUrl;
   if (patch.notes !== undefined) result.notes = patch.notes;
   if (patch.thinkingLevelMap !== undefined) result.thinkingLevelMap = { ...patch.thinkingLevelMap };
