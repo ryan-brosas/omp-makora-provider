@@ -48,23 +48,24 @@
  * supportsDeveloperRole is set to false for all models.
  *
  * Usage:
- *   # Option 1: Store in auth.json (recommended)
- *   # Add to ~/.pi/agent/auth.json:
- *   #   "makora": { "type": "api_key", "key": "your-api-key" }
+ *   # Install (once)
+ *   omp plugin install omp-makora-provider
  *
- *   # Option 2: Set as environment variable
+ *   # Authenticate through OMP's login UI
+ *   /login makora
+ *
+ *   # Optional explicit environment override
  *   export MAKORA_OPTIMIZE_TOKEN=your-api-key
  *
- *   # Run pi with the extension
- *   pi -e /path/to/pi-makora-provider
- *
- * Then use /model to select from available models.
+ * Then use /model to select from available Makora models.
  */
 
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import modelsData from "./models.json" with { type: "json" };
-import customModelsData from "./custom-models.json" with { type: "json" };
-import patchData from "./patch.json" with { type: "json" };
+import { readFileSync } from "node:fs";
+import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
+
+function loadJson<T>(relativePath: string): T {
+  return JSON.parse(readFileSync(new URL(relativePath, import.meta.url), "utf8")) as T;
+}
 
 // Types
 
@@ -128,6 +129,17 @@ interface PatchEntry {
 }
 
 type PatchMap = Record<string, PatchEntry>;
+
+interface MakoraOAuthCredentials {
+  refresh: string;
+  access: string;
+  expires: number;
+}
+
+interface MakoraLoginCallbacks {
+  onPrompt(prompt: { message: string; placeholder?: string; allowEmpty?: boolean }): Promise<string>;
+  signal?: AbortSignal;
+}
 
 // Patch Application
 
@@ -206,6 +218,50 @@ function buildModels(
 
 const PROVIDER_ID = "makora";
 const BASE_URL = "https://inference.makora.com/v1";
+const API_KEY_ENV = "MAKORA_OPTIMIZE_TOKEN";
+
+function resolveMakoraApiKey(): string | undefined {
+  const envKey = process.env[API_KEY_ENV]?.trim();
+  return envKey && envKey.length > 0 ? envKey : undefined;
+}
+
+function makeStaticCredentials(apiKey: string): MakoraOAuthCredentials {
+  return {
+    refresh: apiKey,
+    access: apiKey,
+    expires: 4102444800000,
+  };
+}
+
+async function validateMakoraApiKey(apiKey: string, signal?: AbortSignal): Promise<void> {
+  const response = await fetch(`${BASE_URL}/models`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+    signal,
+  });
+  if (response.ok) return;
+
+  let message = `Makora API key rejected (${response.status} ${response.statusText})`;
+  try {
+    const body = (await response.json()) as { error?: { message?: string }; message?: string };
+    message = body.error?.message ?? body.message ?? message;
+  } catch {
+    // Keep the status-derived message.
+  }
+  throw new Error(message);
+}
+
+async function loginMakora(callbacks: MakoraLoginCallbacks): Promise<MakoraOAuthCredentials> {
+  const apiKey = (
+    await callbacks.onPrompt({
+      message: "Enter Makora API key:",
+      placeholder: "Makora API key",
+      allowEmpty: false,
+    })
+  ).trim();
+  if (!apiKey) throw new Error("Makora API key is required");
+  await validateMakoraApiKey(apiKey, callbacks.signal);
+  return makeStaticCredentials(apiKey);
+}
 
 const DS_PRO_ID = "deepseek-ai/DeepSeek-V4-Pro";
 const DS_FLASH_ID = "deepseek-ai/DeepSeek-V4-Flash";
@@ -263,19 +319,33 @@ function rewriteVllmPayload(payload: Record<string, unknown>): Record<string, un
 }
 
 export default function (pi: ExtensionAPI) {
-  const embeddedModels = modelsData as JsonModel[];
-  const customModels = customModelsData as JsonModel[];
-  const patches = patchData as PatchMap;
+  const embeddedModels = loadJson<JsonModel[]>("models.json");
+  const customModels = loadJson<JsonModel[]>("custom-models.json");
+  const patches = loadJson<PatchMap>("patch.json");
 
   const models = buildModels(embeddedModels, customModels, patches);
 
-  // apiKey resolution order: auth.json ("makora" key) → MAKORA_OPTIMIZE_TOKEN env var
+  const apiKey = resolveMakoraApiKey();
+
+  // Only install an explicit env override. Without this, OMP auth storage from
+  // `/login makora` owns credentials; we must not pass a placeholder string
+  // that would become a literal bearer token.
   pi.registerProvider(PROVIDER_ID, {
     name: "Makora",
     baseUrl: BASE_URL,
-    apiKey: "$MAKORA_OPTIMIZE_TOKEN",
+    ...(apiKey ? { apiKey } : {}),
     api: "openai-completions",
     models,
+    oauth: {
+      name: "Makora",
+      login: loginMakora,
+      async refreshToken(credentials: MakoraOAuthCredentials): Promise<MakoraOAuthCredentials> {
+        return credentials;
+      },
+      getApiKey(credentials: MakoraOAuthCredentials): string {
+        return credentials.access;
+      },
+    },
   });
 
   pi.on("before_provider_request", (event) => {

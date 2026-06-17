@@ -1,12 +1,12 @@
 <div align="center">
 
-# 🔁 pi-makora-provider
+# 🔁 omp-makora-provider
 
 **Open-weight models through [Makora](https://inference.makora.com)**
 
-_DeepSeek V4, Kimi K2.6, GLM 5.1, Qwen 3.6 — with client-side tool call repair for [pi](https://github.com/earendil-works/pi-coding-agent)._
+_DeepSeek V4, Kimi K2.6, GLM 5.1, Qwen 3.6 — with client-side tool call repair for [OMP](https://github.com/oh-my-pi/oh-my-pi) / [pi](https://github.com/earendil-works/pi-coding-agent)._
 
-[![pi extension](https://img.shields.io/badge/pi-extension-blueviolet)](https://github.com/earendil-works/pi-coding-agent)
+[![OMP plugin](https://img.shields.io/badge/OMP-plugin-blueviolet)](https://github.com/oh-my-pi/oh-my-pi)
 [![license](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
 </div>
@@ -31,91 +31,43 @@ _DeepSeek V4, Kimi K2.6, GLM 5.1, Qwen 3.6 — with client-side tool call repair
 | Qwen 3.6 35B A3B NVFP4 | `unsloth/Qwen3.6-35B-A3B-NVFP4` | Yes | `enable_thinking` via `qwen-chat-template`; client-side tool call parsing (vLLM streaming parser bypass) |
 <!-- MODELS_TABLE_END -->
 
-## Installation
-
-### Option 1: Install from npm (Recommended)
+## Quickstart
 
 ```bash
-pi install npm:pi-makora-provider
+# 1. Install
+omp plugin install omp-makora-provider
+
+# 2. Add your API key
+omp
+/login makora
+
+# 3. Pick a model and go
+/model makora
 ```
 
-Then set your API key and run pi:
-```bash
-# Recommended: add to auth.json
-# See Authentication section below
+That's it. Makora models now appear in `/model`. No `-e` flag, no manual clone, no config files.
 
-# Or set as environment variable
-export MAKORA_OPTIMIZE_TOKEN=your-api-key-here
+### API key
 
-pi
-```
-
-### Option 2: Using `pi install` from GitHub
-
-Install directly from GitHub:
-
-```bash
-pi install https://github.com/monotykamary/pi-makora-provider
-```
-
-Then set your API key and run pi:
-```bash
-# Recommended: add to auth.json
-# See Authentication section below
-
-# Or set as environment variable
-export MAKORA_OPTIMIZE_TOKEN=your-api-key-here
-
-pi
-```
-
-### Option 3: Manual Clone
-
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/monotykamary/pi-makora-provider.git
-   cd pi-makora-provider
-   ```
-
-2. Set your Makora API key:
-   ```bash
-   # Recommended: add to auth.json
-   # See Authentication section below
-
-   # Or set as environment variable
-   export MAKORA_OPTIMIZE_TOKEN=your-api-key-here
-   ```
-
-3. Run pi with the extension:
-   ```bash
-   pi -e /path/to/pi-makora-provider
-   ```
-
-## Setup
-
-### API Key
-
-Add your Makora API key to `~/.pi/agent/auth.json` (recommended):
-
-```json
-{
-  "makora": { "type": "api_key", "key": "your-api-key" }
-}
-```
-
-Or set it as an environment variable:
+`/login makora` prompts for your Makora API key, validates it, and stores it. Or set it explicitly:
 
 ```bash
 export MAKORA_OPTIMIZE_TOKEN=your-api-key
 ```
 
-### Usage
+Get a key at [inference.makora.com](https://inference.makora.com).
+
+### Other install paths
 
 ```bash
-pi -e /path/to/pi-makora-provider
+# From GitHub
+omp plugin install https://github.com/ryan-brosas/omp-makora-provider
+
+# Local development
+git clone https://github.com/ryan-brosas/omp-makora-provider.git
+omp plugin link ./omp-makora-provider
 ```
 
-Then use `/model` to select from available Makora models.
 
 ## Model Resolution
 
@@ -163,7 +115,7 @@ Do **not** edit `models.json` directly — it is auto-generated from the API. To
 
 These issues are common to all vLLM-hosted providers and affect Makora models:
 
-- **GLM 5.1 tool calling**: vLLM's streaming tool call handling is broken for GLM — the model outputs Zhipu's native `<tool_call>` XML format as raw text. The `message_end` hook parses this into `toolCall` blocks so pi can execute the tools. A `context` hook then strips `tool_calls` from assistant messages before follow-up requests, converting them back to `<tool_call>` text to avoid a ZAI/vLLM server crash (500: `'str object' has no attribute 'items'`) that occurs when any assistant message contains a `tool_calls` field. If upstream fixes both the streaming parser and the 500 crash, the `message_end` hook gracefully skips (existing valid `toolCall` blocks are preserved), and the `context` hook's text-stripping is harmless (GLM natively understands `<tool_call>` format in conversation history).
+- **GLM 5.1 tool calling**: vLLM's streaming tool call handling is broken for GLM — the model outputs Zhipu's native `<tool_call>` XML format as raw text. The `message_end` hook parses this into `toolCall` blocks so OMP / pi can execute the tools. A `context` hook then strips `tool_calls` from assistant messages before follow-up requests, converting them back to `<tool_call>` text to avoid a ZAI/vLLM server crash (500: `'str object' has no attribute 'items'`) that occurs when any assistant message contains a `tool_calls` field. If upstream fixes both the streaming parser and the 500 crash, the `message_end` hook gracefully skips (existing valid `toolCall` blocks are preserved), and the `context` hook's text-stripping is harmless (GLM natively understands `<tool_call>` text).
 
   - **Kimi K2.6 + Qwen 3.6 tool calling**: vLLM's streaming tool call handling is broken or missing for these models. The `before_provider_request` hook sets `tool_choice: "none"` and `skip_special_tokens: false` so the model's tool call tokens pass through as plain text. The `message_end` hook then re-parses into `toolCall` blocks:
 
@@ -175,5 +127,5 @@ These issues are common to all vLLM-hosted providers and affect Makora models:
 - **DeepSeek V4 reasoning**: The official DeepSeek API uses `thinking: { type: "enabled" }` which Makora's vLLM silently ignores. The `before_provider_request` hook rewrites the payload to use vLLM-native params instead:
   - **DS V4 Pro**: `chat_template_kwargs: { thinking: true }`. Returns `reasoning_content`.
   - **DS V4 Flash**: `include_reasoning: true` + `chat_template_kwargs: { thinking: true }`. `include_reasoning` alone returns `reasoning: null` on this vLLM build — both params are required. Returns `reasoning`.
-- **GLM 5.1 reasoning**: Returns `reasoning_content` (not `reasoning`). pi's OpenAI completions handler checks `reasoning_content` first, so this is handled correctly.
+- **GLM 5.1 reasoning**: Returns `reasoning_content` (not `reasoning`). OMP / pi's OpenAI completions handler checks `reasoning_content` first, so this is handled correctly.
 - **MiniMax M3 reasoning**: Uses `chat_template_kwargs.enable_thinking` to toggle thinking (not `chat_template_kwargs.thinking` like DeepSeek). The `before_provider_request` hook rewrites the DeepSeek API-style `thinking` param into vLLM-native `chat_template_kwargs: { enable_thinking: true }`. Returns `reasoning_content` field.
