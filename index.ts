@@ -61,6 +61,7 @@
  */
 
 import { readFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
 
 function loadJson<T>(relativePath: string): T {
@@ -337,6 +338,11 @@ function rewriteVllmPayload(payload: Record<string, unknown>): Record<string, un
     p.skip_special_tokens = false;
   }
 
+  // GLM 5.1: force vLLM explicit tool streaming path so delta.tool_calls are emitted
+  if (model === GLM_5_1_ID) {
+    p.tool_stream = true;
+  }
+
   return p;
 }
 
@@ -361,8 +367,11 @@ function parseGlmToolCalls(text: string): ParsedToolCall[] {
         results.push({ name, arguments: args as Record<string, unknown> });
       }
     } catch {
-      // Malformed JSON — skip this tool call
+      console.warn(`makora: [GLM 5.1] failed to parse tool call args: ${rawArgs.slice(0, 200)}`);
     }
+  }
+  if (results.length === 0) {
+    console.debug(`makora: [GLM 5.1] no tool calls extracted from text (${text.length}B)`);
   }
   return results;
 }
@@ -381,8 +390,11 @@ function parseKimiToolCalls(text: string): ParsedToolCall[] {
         results.push({ name, arguments: args as Record<string, unknown> });
       }
     } catch {
-      // Malformed JSON — skip
+      console.warn(`makora: [Kimi] failed to parse tool call args: ${rawArgs.slice(0, 200)}`);
     }
+  }
+  if (results.length === 0) {
+    console.debug(`makora: [Kimi] no tool calls extracted from text (${text.length}B)`);
   }
   return results;
 }
@@ -403,13 +415,20 @@ function parseQwenToolCalls(text: string): ParsedToolCall[] {
         results.push({ name, arguments: args as Record<string, unknown> });
       }
     } catch {
-      // Malformed JSON — skip
+      console.warn(`makora: [Qwen] failed to parse tool call args: ${rawArgs.slice(0, 200)}`);
     }
+  }
+  if (results.length === 0) {
+    console.debug(`makora: [Qwen] no tool calls extracted from text (${text.length}B)`);
   }
   return results;
 }
 
 function parseToolCallsFromText(model: string, text: string): ParsedToolCall[] {
+  // Early return: skip regex scan if text lacks tool call markers
+  if (!text.includes("<tool_call>") && !text.includes("<|tool_call_begin|>") && !text.includes("<function=")) {
+    return [];
+  }
   if (model === GLM_5_1_ID) return parseGlmToolCalls(text);
   if (model === KIMI_K2_6_ID || model === KIMI_K2_7_ID) return parseKimiToolCalls(text);
   if (model === QWEN_3_6_27B_ID || model === QWEN_3_6_35B_ID) return parseQwenToolCalls(text);
@@ -478,7 +497,7 @@ function buildRepairedContent(
     const tc = parsed[i];
     result.push({
       type: "toolCall",
-      id: `call_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 8)}`,
+      id: `call_${randomUUID()}`,
       name: tc.name,
       arguments: tc.arguments,
     });
@@ -556,7 +575,10 @@ export default function (pi: ExtensionAPI) {
     if (!text) return;
 
     const parsed = parseToolCallsFromText(model, text);
-    if (parsed.length === 0) return;
+    if (parsed.length === 0) {
+      console.debug(`makora: [${model}] tool call repair returned empty — raw text may contain unrecognized format`);
+      return;
+    }
 
     const textBefore = splitBeforeTools(model, text);
     const repaired = buildRepairedContent(content, parsed, textBefore);

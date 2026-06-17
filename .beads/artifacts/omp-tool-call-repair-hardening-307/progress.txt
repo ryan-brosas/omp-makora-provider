@@ -1,2 +1,4 @@
 [2026-06-17] Bead created: omp-tool-call-repair-hardening-307
 [2026-06-17] Worktree created: bead/omp-tool-call-repair-hardening-307
+[2026-06-17] Wave 1 complete: all 4 tasks (zaiToolStream, UUID, early-return, diagnostics)
+[2026-06-17] Wave 2 complete: grep verification passes for all 4 changes
