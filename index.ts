@@ -332,10 +332,15 @@ function rewriteVllmPayload(payload: Record<string, unknown>): Record<string, un
   }
 
   // Kimi K2.6 / K2.7 / Qwen 3.6: vLLM streaming tool_choice is broken.
-  // Disable native tool_choice and let raw tokens through as text.
+  // When tools are present, disable native tool_choice and let raw tokens
+  // through as text for client-side repair. For normal chat (no tools),
+  // let vLLM handle the response natively — no special token leakage.
   if (DISABLE_TOOL_CHOICE_MODELS.has(model)) {
-    p.tool_choice = "none";
-    p.skip_special_tokens = false;
+    const hasTools = Array.isArray(p.tools) && (p.tools as unknown[]).length > 0;
+    if (hasTools) {
+      p.tool_choice = "none";
+      p.skip_special_tokens = false;
+    }
   }
 
   // GLM 5.1: force vLLM explicit tool streaming path so delta.tool_calls are emitted
