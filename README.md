@@ -4,7 +4,7 @@
 
 **Open-weight models through [Makora](https://inference.makora.com)**
 
-_DeepSeek V4, Kimi K2.6, GLM 5.1, Qwen 3.6 — with client-side tool call repair for [OMP](https://github.com/oh-my-pi/oh-my-pi) / [pi](https://github.com/earendil-works/pi-coding-agent)._
+_DeepSeek V4, Kimi K2.6, GLM 5.1 / 5.2, Qwen 3.6 — with client-side tool call repair for [OMP](https://github.com/oh-my-pi/oh-my-pi) / [pi](https://github.com/earendil-works/pi-coding-agent)._
 
 [![OMP plugin](https://img.shields.io/badge/OMP-plugin-blueviolet)](https://github.com/oh-my-pi/oh-my-pi)
 [![license](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
@@ -21,6 +21,7 @@ _DeepSeek V4, Kimi K2.6, GLM 5.1, Qwen 3.6 — with client-side tool call repair
 | DeepSeek V4 Flash | `deepseek-ai/DeepSeek-V4-Flash` | Yes | `include_reasoning` + `chat_template_kwargs.thinking` via `before_provider_request` payload rewrite; returns `reasoning` field |
 | DeepSeek V4 Pro | `deepseek-ai/DeepSeek-V4-Pro` | Yes | `chat_template_kwargs.thinking` via `before_provider_request` payload rewrite; returns `reasoning_content` field |
 | GLM 5.1 FP8 | `zai-org/GLM-5.1-FP8` | Yes | `enable_thinking` via `qwen-chat-template`; returns `reasoning_content` field; client-side tool call parsing (vLLM streaming parser bypass) |
+| GLM 5.2 FP8 | `zai-org/GLM-5.2-FP8` | Yes | `enable_thinking` via `qwen-chat-template`; returns `reasoning` field; native tool calls work in both stream and non-stream (no client-side repair needed) |
 | GPT-OSS 120B | `openai/gpt-oss-120b` | Yes | Reasoning always on |
 | Kimi K2.6 NVFP4 | `nvidia/Kimi-K2.6-NVFP4` | Yes | Reasoning on by default; client-side tool call parsing (vLLM streaming parser bypass) |
 | Kimi K2.7 Code | `moonshotai/Kimi-K2.7-Code` | Yes | Reasoning on by default; client-side tool call parsing (vLLM streaming parser bypass) |

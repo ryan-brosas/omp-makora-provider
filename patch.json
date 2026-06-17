@@ -131,5 +131,18 @@
       "supportsReasoningEffort": true,
       "zaiToolStream": true
     }
-  }
+  },
+  "zai-org/GLM-5.2-FP8": {
+    "contextWindow": 200000,
+    "reasoning": true,
+    "notes": "`enable_thinking` via `qwen-chat-template`; returns `reasoning` field; native tool calls work in both stream and non-stream (no client-side repair needed)",
+    "thinkingLevelMap": {
+      "minimal": "low",
+      "xhigh": "high"
+    },
+    "compat": {
+      "thinkingFormat": "qwen-chat-template",
+      "supportsReasoningEffort": true
+    }
+}
 }

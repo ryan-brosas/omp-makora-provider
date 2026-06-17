@@ -122,6 +122,19 @@ const MODELS: ModelSpec[] = [
       chat_template_kwargs: { enable_thinking: true },
     }),
   },
+  {
+    id: "zai-org/GLM-5.2-FP8",
+    name: "GLM 5.2 FP8",
+    reasoningResponseField: "reasoning",
+    buildPayload: (messages) => ({
+      model: "zai-org/GLM-5.2-FP8",
+      messages,
+      max_tokens: 1024,
+      stream: false,
+      // Mimics qwen-chat-template thinkingFormat
+      chat_template_kwargs: { enable_thinking: true },
+    }),
+  },
 ];
 
 // API helper
