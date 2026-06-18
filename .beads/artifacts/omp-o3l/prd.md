@@ -52,7 +52,7 @@ GLM 5.1 FP8 responses from Makora leak vLLM chat-template chain-of-thought senti
 ## Verification
 
 ```bash
-npx vitest run tests/glm-cot-strip.test.ts
+npm test
 ```
 
 All 10 tests must pass. Tests cover: R1–R10.
