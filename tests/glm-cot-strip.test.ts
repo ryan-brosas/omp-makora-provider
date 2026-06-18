@@ -49,7 +49,8 @@ function assistantMessage(model: string, text: string, extraContent: Record<stri
 
 function runHook(message: Record<string, unknown>) {
   const hook = loadMessageEnd();
-  return hook({ message }) as { message?: Record<string, unknown> } | undefined;
+  hook({ message });
+  return { message } as { message?: Record<string, unknown> } | undefined;
 }
 
 function expectMessage(result: { message?: Record<string, unknown> } | undefined): Record<string, unknown> {
@@ -90,17 +91,23 @@ describe("GLM 5.1 leaked chain-of-thought marker stripping", () => {
 
   it("passes through messages with neither marker unchanged", () => {
     const msg = assistantMessage(GLM_5_1_ID, "Visible answer without leaked markers.");
-    expect(runHook(msg)).toBeUndefined();
+    const before = textContent(msg);
+    runHook(msg);
+    expect(textContent(msg)).toBe(before);
   });
 
   it("passes through thinking-only partial leaks unchanged", () => {
     const msg = assistantMessage(GLM_5_1_ID, " thinking\nprivate reasoning without response marker");
-    expect(runHook(msg)).toBeUndefined();
+    const before = textContent(msg);
+    runHook(msg);
+    expect(textContent(msg)).toBe(before);
   });
 
   it("passes through response-only partial leaks unchanged", () => {
     const msg = assistantMessage(GLM_5_1_ID, " response\nVisible answer without thinking marker");
-    expect(runHook(msg)).toBeUndefined();
+    const before = textContent(msg);
+    runHook(msg);
+    expect(textContent(msg)).toBe(before);
   });
 
   it("cleans thinking before repairing GLM tool calls", () => {
@@ -127,16 +134,22 @@ describe("GLM 5.1 leaked chain-of-thought marker stripping", () => {
 
   it("passes through wrong marker order unchanged", () => {
     const msg = assistantMessage(GLM_5_1_ID, " response\nVisible answer first. thinking\nlate reasoning");
-    expect(runHook(msg)).toBeUndefined();
+    const before = textContent(msg);
+    runHook(msg);
+    expect(textContent(msg)).toBe(before);
   });
 
   it("passes through non-GLM models unchanged even with marker text", () => {
     const msg = assistantMessage(DEEPSEEK_ID, " thinking\nnot GLM private text\n response\nVisible answer.");
-    expect(runHook(msg)).toBeUndefined();
+    const before = textContent(msg);
+    runHook(msg);
+    expect(textContent(msg)).toBe(before);
   });
 
   it("passes through marker pairs inside fenced code blocks unchanged", () => {
     const msg = assistantMessage(GLM_5_1_ID, "```\n thinking\nexample\n response\ncode\n```\nNo leak.");
-    expect(runHook(msg)).toBeUndefined();
+    const before = textContent(msg);
+    runHook(msg);
+    expect(textContent(msg)).toBe(before);
   });
 });
