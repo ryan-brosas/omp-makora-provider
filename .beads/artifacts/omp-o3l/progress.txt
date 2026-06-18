@@ -1,26 +1,26 @@
 omp-o3l: Strip leaked GLM 5.1 chain-of-thought content markers from assistant messages
 =====================================================================
 
-STATUS: /create complete — PRD rewritten (was padded, now focused)
+STATUS: /ship complete — tests fixed and passing
 
-PHASE: /create
+PHASE: /ship
 
 COMPLETED:
 - [x] Restored accidentally deleted .pi/ files from working tree
 - [x] Rewrote prd.md from 767-line padded version to focused ~80-line version
-- [x] Confirmed prd.json is accurate (no changes needed)
-- [x] Identified test failures: 4 of 10 tests fail because `runHook` returns hook's return value (undefined) instead of the mutated message
+- [x] Fixed test helper runHook: call hook then return {message} instead of returning hook() return value
+- [x] Fixed pass-through tests: assert content unchanged instead of checking return undefined
+- [x] All 10 tests pass (20 total including worktree copy)
 
-EXISTING IMPLEMENTATION (already in index.ts):
-- `stripGlmCotMarkers()` at lines 635-662
-- Integration in `message_end` handler at lines 711-724
+IMPLEMENTATION (pre-existing in index.ts):
+- stripGlmCotMarkers() at lines 635-662
+- Integration in message_end handler at lines 711-724
 - Both are correct and complete
 
-KNOWN ISSUE:
-- Test helper `runHook` at tests/glm-cot-strip.test.ts:50-53 returns hook() return value
-- The hook mutates event.message in-place (line 767 comment confirms this)
-- `runHook` should return `{ message }` after calling the hook, not the hook's return value
-- Fix is a one-line change in the test helper
+TEST FIX DETAILS:
+- The message_end hook mutates event.message in-place (line 765-766 comment)
+- runHook was returning hook() return value (undefined), should return {message}
+- Pass-through tests were checking return == undefined, should check content unchanged
 
 NEXT:
-- /plan → /ship (fix test helper) → /verify → /review → /close
+- /verify omp-o3l
