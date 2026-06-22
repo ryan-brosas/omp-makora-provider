@@ -1,9 +1,13 @@
 {
   "name": "omp-makora-provider",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Makora provider plugin for OMP — Access DeepSeek V4, GLM 5.1, Kimi K2.6, Llama 3.3, Qwen 3.6, and more through the Makora inference API",
   "type": "module",
   "main": "index.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ryan-brosas/omp-makora-provider"
+  },
   "scripts": {
     "clean": "echo 'nothing to clean'",
     "build": "echo 'nothing to build'",
