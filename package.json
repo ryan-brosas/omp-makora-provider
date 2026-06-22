@@ -1,7 +1,7 @@
 {
   "name": "omp-makora-provider",
-  "version": "1.0.1",
-  "description": "Makora provider plugin for OMP \u2014 Access DeepSeek V4, GLM 5.1, Kimi K2.6, Llama 3.3, Qwen 3.6, and more through the Makora inference API",
+  "version": "1.0.2",
+  "description": "Makora provider plugin for OMP — Access DeepSeek V4, GLM 5.1, Kimi K2.6, Llama 3.3, Qwen 3.6, and more through the Makora inference API",
   "type": "module",
   "main": "index.ts",
   "scripts": {
