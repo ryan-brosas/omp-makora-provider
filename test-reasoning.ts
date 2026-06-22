@@ -125,7 +125,7 @@ const MODELS: ModelSpec[] = [
   {
     id: "zai-org/GLM-5.2-FP8",
     name: "GLM 5.2 FP8",
-    reasoningResponseField: "reasoning",
+    reasoningResponseField: "reasoning_content",
     buildPayload: (messages) => ({
       model: "zai-org/GLM-5.2-FP8",
       messages,

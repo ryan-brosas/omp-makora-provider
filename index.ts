@@ -134,6 +134,11 @@ interface PatchEntry {
 
 type PatchMap = Record<string, PatchEntry>;
 
+/** Type guard: non-null, non-array object. */
+export function isObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
 interface MakoraOAuthCredentials {
   refresh: string;
   access: string;
@@ -277,6 +282,7 @@ const DS_FLASH_ID = "deepseek-ai/DeepSeek-V4-Flash";
 const MINIMAX_M3_ID = "MiniMaxAI/MiniMax-M3-MXFP8";
 
 const GLM_5_1_ID = "zai-org/GLM-5.1-FP8";
+const GLM_5_2_ID = "zai-org/GLM-5.2-FP8";
 const KIMI_K2_6_ID = "nvidia/Kimi-K2.6-NVFP4";
 const KIMI_K2_7_ID = "moonshotai/Kimi-K2.7-Code";
 const QWEN_3_6_27B_ID = "unsloth/Qwen3.6-27B-NVFP4";
@@ -304,7 +310,7 @@ const DISABLE_TOOL_CHOICE_MODELS = new Set([
 
 // GLM 5.1: assistant messages with tool_calls crash vLLM (500).
 // We must strip tool_calls and convert back to <tool_call> XML on follow-up requests.
-const GLM_TOOL_CALL_STRIP_MODELS = new Set([GLM_5_1_ID]);
+const GLM_TOOL_CALL_STRIP_MODELS = new Set([GLM_5_1_ID, GLM_5_2_ID]);
 
 // ─── vLLM thinking param rewrite ────────────────────────────────────────────
 
@@ -661,6 +667,80 @@ function stripGlmCotMarkers(content: ContentBlock[]): GlmCotStripResult {
   };
 }
 
+/**
+ * GLM models on Makora's vLLM crash with a leaked Python AttributeError
+ * (`'list object' has no attribute 'items'` or `'str object' has no attribute 'items'`)
+ * when any assistant message in the request contains a `tool_calls` field.
+ * The ZAI/vLLM chat template calls `.items()` on the tool_calls list (or on the
+ * JSON-string `arguments` field), which raises AttributeError and leaks into the
+ * HTTP 400 response body.
+ *
+ * Fix: for GLM models, strip `tool_calls` from assistant messages in the
+ * before_provider_request hook and convert them back to GLM's native
+ * `<tool_call>` XML text in `content`. The model natively understands this
+ * format in conversation history, and the `role: "tool"` result messages that
+ * follow are rendered fine by the chat template's tool-observation branch.
+ *
+ * If upstream fixes both the streaming parser and the 500/400 crash, this
+ * transform becomes a harmless no-op (the XML text is still valid GLM input).
+ */
+export function toolCallToGlmXml(tc: Record<string, unknown>): string {
+  const fn = (isObject(tc.function) ? tc.function : {}) as Record<string, unknown>;
+  const name = typeof fn.name === "string" ? fn.name : "";
+  const argsStr = typeof fn.arguments === "string" ? fn.arguments : "{}";
+  let args: Record<string, unknown>;
+  try {
+    args = JSON.parse(argsStr) as Record<string, unknown>;
+  } catch {
+    args = {};
+  }
+  if (!isObject(args)) args = {};
+  const argLines = Object.entries(args).map(
+    ([key, value]) =>
+      `<arg_key>${key}</arg_key>
+<arg_value>${
+        typeof value === "string" ? value : JSON.stringify(value)
+      }</arg_value>`,
+  );
+  return `<tool_call>${name}
+${argLines.join("\n")}
+</tool_call>`;
+}
+
+export function stripGlmToolCalls(payload: Record<string, unknown>): Record<string, unknown> {
+  const messages = payload.messages;
+  if (!Array.isArray(messages)) return payload;
+
+  let modified = false;
+  const newMessages = messages.map((msg) => {
+    if (!isObject(msg)) return msg;
+    if (msg.role !== "assistant") return msg;
+
+    const toolCalls = msg.tool_calls;
+    if (!Array.isArray(toolCalls) || toolCalls.length === 0) return msg;
+
+    const xmlBlocks = toolCalls
+      .filter((tc): tc is Record<string, unknown> => isObject(tc))
+      .map(toolCallToGlmXml);
+    if (xmlBlocks.length === 0) return msg;
+
+    const toolCallText = xmlBlocks.join("\n");
+    const existingContent = typeof msg.content === "string" ? msg.content : "";
+    const newContent = existingContent ? `${existingContent}
+${toolCallText}` : toolCallText;
+
+    modified = true;
+    const rest: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(msg)) {
+      if (k !== "tool_calls") rest[k] = v;
+    }
+    return { ...rest, content: newContent };
+  });
+
+  if (!modified) return payload;
+  return { ...payload, messages: newMessages };
+}
+
 // ─── Provider entry point ──────────────────────────────────────────────────
 export default function (pi: ExtensionAPI) {
   const embeddedModels = loadJson<JsonModel[]>("models.json");
@@ -693,7 +773,11 @@ export default function (pi: ExtensionAPI) {
   pi.on("before_provider_request", (event) => {
     const payload = event.payload as Record<string, unknown> | undefined;
     if (!payload || typeof payload.model !== "string") return;
-    return rewriteVllmPayload(payload);
+    let result = rewriteVllmPayload(payload);
+    if (GLM_TOOL_CALL_STRIP_MODELS.has(payload.model)) {
+      result = stripGlmToolCalls(result);
+    }
+    return result;
   });
 
   // Parse raw tool call tokens into proper ToolCall blocks after each message

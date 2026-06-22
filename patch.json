@@ -153,10 +153,13 @@
     "contextWindow": 980000,
     "reasoning": true,
     "maxTokens": 16384,
-    "notes": "`enable_thinking` via `qwen-chat-template`; returns `reasoning` field; native tool calls work in both stream and non-stream (no client-side repair needed)",
+    "notes": "`enable_thinking` via `qwen-chat-template`; thinking levels copied from neuralwatt GLM 5.2; returns `reasoning_content` field; native tool calls work in both stream and non-stream (no client-side repair needed)",
     "thinkingLevelMap": {
-      "minimal": "low",
-      "xhigh": "high"
+      "minimal": "minimal",
+      "low": "low",
+      "medium": "medium",
+      "high": "high",
+      "xhigh": "max"
     },
     "compat": {
       "thinkingFormat": "qwen-chat-template",

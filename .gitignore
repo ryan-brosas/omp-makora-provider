@@ -1,3 +1,11 @@
+node_modules/
+dist/
+*.js
+*.js.map
+*.d.ts
+!.github/**
+.vite/
+
 # bv (beads viewer) local config and caches
 .bv/
 .worktrees/
